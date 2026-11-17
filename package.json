@@ -1,0 +1,11 @@
+{
+  "name": "in-full-tale",
+  "private": true,
+  "type": "module",
+  "description": "In Full Tale: a 2D action Metroidvania. Static site, no build step.",
+  "scripts": {
+    "test": "node tests/verses.test.mjs && node tests/reach.test.mjs",
+    "test:play": "node tests/play/m1.cjs",
+    "serve": "node tests/serve.mjs"
+  }
+}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>In Full Tale</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; height: 100%; background: #07050b; overflow: hidden; }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #frame { position: relative; }
+  canvas { display: block; image-rendering: crisp-edges; image-rendering: pixelated; }
+  #ui { position: absolute; inset: 0; pointer-events: none; font-family: Georgia, 'Times New Roman', serif; color: #f1e2c0; }
+  #ui > * { pointer-events: auto; }
+  #debug { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); width: min(92%, 460px); box-sizing: border-box;
+    background: rgba(14, 10, 18, 0.94); border: 1px solid #c98b3f; padding: 12px 16px; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+  #debug h2 { margin: 0 0 6px; font-size: 14px; color: #ffd680; letter-spacing: 0.1em; text-transform: uppercase; }
+  #debug .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  #debug .powers { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin: 8px 0; }
+  #debug select, #debug input[type=number], #debug button { background: #1c1524; color: #f1e2c0; border: 1px solid #86522a; padding: 3px 6px; font: inherit; }
+  #debug input[type=number] { width: 5em; }
+  #debug button { cursor: pointer; }
+  #debug button:hover { border-color: #ffd680; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame"><canvas id="game" width="480" height="270"></canvas><div id="ui"></div></div></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
