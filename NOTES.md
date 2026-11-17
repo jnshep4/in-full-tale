@@ -17,7 +17,7 @@ RUN_BUDGET: (not set. Per BRIEF.md: until James adds a reading below, a run stop
   - A trophy that bounces onto a ledge David cannot reach from where the soldier fell would be stuck there. No such ledge exists in the current room, and stakes and pits already send a trophy back to its soldier's post. Keep this in mind when placing soldiers near gated ledges; the simple fix is to send any trophy still unreachable after a few seconds back to its post.
   - The control hint bar shows for the first 30 seconds of play time on a save and has no "seen" flag.
   - No title screen, music, or settings yet (milestone 5). Audio starts on the first key press.
-- **This run's meter total:** see the last row of the Meter log.
+- **This run's meter total:** about 1,853,196 units at the last commit (run 1). Of that, about 560,000 went to getting the repository created and attached before any code was written.
 - **Estimated runs remaining:** unknown until the first reading. As a rough guide, milestones 2-5 look like 8 to 10 times the work of milestone 1's game code.
 
 ## Readings from James
@@ -32,11 +32,14 @@ No readings yet.
 
 Formula: units = input + 1.25 x cache_write + 0.1 x cache_read + 5 x output (`python3 tools/meter.py`).
 Run 1's total includes about 560,000 units spent before any code was written, getting the repository created and attached.
+When calibrating from run 1's reading, use run 1's final total as logged here; the setup overhead will not recur, so later runs get slightly more game work per unit than run 1 did.
 
 | Run | After commit | Meter units |
 |-----|--------------|-------------|
 | 1 | (baseline before first commit) | 424,026 |
 | 1 | 92e6110 brief, meter, notes skeleton | 560,000 (approx.) |
+| 1 | 7a5c276 milestone 1 | 1,774,104 |
+| 1 | notes update (this commit; read just before committing) | 1,853,196 |
 
 ## How to pick this up (fresh session)
 
