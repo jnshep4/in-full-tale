@@ -44,6 +44,22 @@ Meter at this point: 11,289,440 units of the 17,010,000 stop line. Whole suite g
 
 **For play testers:** https://jnshep4.github.io/in-full-tale/ (desktop browser, keyboard or gamepad; progress saves in that browser only). No session has been able to load the live site since milestone 1, so James should open it once before sharing.
 
+## Phone demo (2026-11-18)
+
+James asked for an iOS demo for play testers. It is the same web page, made to work on a phone; nothing was built for the App Store (that needs a Mac, Xcode and an Apple developer account, none of which a session has).
+
+- `src/touch.js`: on a touch device (or with `?touch=1`) a floating stick on the left half of the screen and JUMP, SLING and II (pause) buttons on the right; DASH, SWORD and CORD appear when earned. They feed `Input.touch`, the same named actions as the keyboard. Controls hide while a card is open; cards are tapped.
+- Screen fit: whole multiples where two or more fit, otherwise the picture is scaled to fill the phone exactly (`fit()` in `src/main.js`). Held upright, a "turn your phone sideways" panel covers the page.
+- Sound starts on the first touch. Leaving the tab pauses and silences the game. Scrolling, pinch-zoom and long-press menus are blocked on touch devices.
+- Settings gained "Lighting: full or simple". Simple drops the pools of light, the costliest part of a frame. On a touch device it switches itself once if the frame rate stays under 42 for four seconds, and says so.
+- Demo mode: `?demo=N` opens only the first N gateways and shows an end-of-demo card when captain N's power is taken; play can continue. The choice is stored on the device (`inFullTale.demo`), so a home-screen icon made from a demo link stays a demo; `?demo=0` clears it.
+- Home screen: `manifest.webmanifest`, `icon-180.png`, `icon-512.png` (drawn by `tools/icon.cjs`) and the Apple meta tags, so "Add to Home Screen" in Safari gives a full-screen, landscape icon. There is no service worker: the game needs a connection to load, and testers always get the latest push.
+- `tests/play/m6.cjs`: 20 checks on an emulated iPhone 13 in landscape. This is Chromium with touch and a phone-sized screen, not Safari. **Nothing has been run on a real iPhone.** Speed, sound and the feel of the controls on real devices are unknown until a person tries them.
+
+Links: full game https://jnshep4.github.io/in-full-tale/ ; demo of regions 1-2 https://jnshep4.github.io/in-full-tale/?demo=2 ; region 1 only `?demo=1`.
+
+Meter at this point: 12,965,939 units of the 17,010,000 stop line.
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
@@ -92,6 +108,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | after James's playtest: level sling, rings, decks (read just before committing) | 9,814,982 |
 | 2 | map, music, hand-built regions 5, 6, 8, 9, 10 (read just before committing) | 10,761,823 |
 | 2 | hand-built regions 2, 3, 4, 7 (read just before committing) | 11,289,440 |
+| 2 | phone demo: touch controls, fit, demo mode (read just before committing) | 12,965,939 |
 
 ## Calibration
 

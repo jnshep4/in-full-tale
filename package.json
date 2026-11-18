@@ -5,7 +5,7 @@
   "description": "In Full Tale: a 2D action Metroidvania. Static site, no build step.",
   "scripts": {
     "test": "node tests/verses.test.mjs && node tests/reach.test.mjs",
-    "test:play": "node tests/play/m1.cjs && node tests/play/m2.cjs && node tests/play/m3.cjs && node tests/play/m4.cjs && node tests/play/m5.cjs",
+    "test:play": "node tests/play/m1.cjs && node tests/play/m2.cjs && node tests/play/m3.cjs && node tests/play/m4.cjs && node tests/play/m5.cjs && node tests/play/m6.cjs",
     "serve": "node tests/serve.mjs"
   }
 }

@@ -15,6 +15,7 @@ export class Input {
     this.keys = new Set();      // actions held by the keyboard
     this.latched = new Set();   // taps shorter than one step still register
     this.virtual = new Set();   // actions held by a test script
+    this.touch = new Set();     // actions held on the touch controls
     this.held = {}; this.pressed = {}; this.released = {};
     for (const a of ACTIONS) { this.held[a] = false; this.pressed[a] = false; this.released[a] = false; }
     this.x = 0; this.y = 0;     // movement axes, -1..1
@@ -34,7 +35,7 @@ export class Input {
 
   poll() {
     const now = {};
-    for (const a of ACTIONS) now[a] = this.latched.has(a) || this.virtual.has(a);
+    for (const a of ACTIONS) now[a] = this.latched.has(a) || this.virtual.has(a) || this.touch.has(a);
     for (const code of this.keys) now[KEYMAP[code]] = true;
     this.latched.clear();
     let ax = 0, ay = 0;

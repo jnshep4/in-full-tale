@@ -33,7 +33,7 @@ export function clearSave(storage) { try { storage && storage.removeItem(KEY); }
 
 // Settings live under their own key, so erasing a save keeps them.
 const SKEY = 'inFullTale.settings.v1';
-export const defaultSettings = () => ({ sound: 0.6, music: 0.5, shake: true });
+export const defaultSettings = () => ({ sound: 0.6, music: 0.5, shake: true, light: true });
 export function loadSettings(storage) {
   try { return Object.assign(defaultSettings(), JSON.parse((storage && storage.getItem(SKEY)) || '{}')); } catch (e) { return defaultSettings(); }
 }

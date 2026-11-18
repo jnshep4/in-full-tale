@@ -23,7 +23,8 @@ import { Trophy } from './ent/trophy.js';
 function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; }
 
 export class Game {
-  constructor(canvas, { storage = null, seed = 20261117, ui = null, at = null, title = false } = {}) {
+  constructor(canvas, { storage = null, seed = 20261117, ui = null, at = null, title = false, demo = 0, touch = false } = {}) {
+    this.demo = demo; this.touch = touch; this.slow = 0;
     this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.ctx.imageSmoothingEnabled = false;
     [this.world, this.wctx] = mk(W, H);       // tiles and bodies, before lighting
     [this.lightC, this.lctx] = mk(W, H);      // light map
@@ -59,7 +60,7 @@ export class Game {
     const cont = this.hadSave && (this.save.played > 1 || this.save.tally > 0);
     const buttons = cont ? [{ label: 'Continue', value: 'go' }, { label: 'New game', value: 'new' }, { label: 'Settings', value: 'set' }] : [{ label: 'Begin', value: 'go' }, { label: 'Settings', value: 'set' }];
     this.ui.show({ kind: 'title', buttons, sound: 'select', quick: true,
-      html: '<h1>In Full Tale</h1><div class="orn"></div><p class="say">David, a sling, and the price King Saul has set.</p><p class="how">Arrows or WASD to move. Z or Space to jump. Hold X to whirl the sling, release to loose: it flies level and not far, so close in and jump to reach. Up at a gateway to enter. Esc for the tally sheet and settings.</p>',
+      html: `<h1>In Full Tale</h1><div class="orn"></div><p class="say">David, a sling, and the price King Saul has set.</p>${this.demo ? '<p class="kicker">Demo</p>' : ''}<p class="how">${this.touch ? 'Left thumb moves David: push up at a gateway to go in. JUMP jumps. Hold SLING and let go to loose a stone: it flies level and not far, so close in and jump to reach. The II button opens the tally sheet, map and settings.' : `Arrows or WASD to move. Z or Space to jump. Hold X to whirl the sling, release to loose: it flies level and not far, so close in and jump to reach. Up at a gateway to enter. Esc for the tally sheet and settings.`}</p>`,
       onClose: (v) => {
         if (v === 'set') this.settingsMenu(() => this.title());
         else if (v === 'new') this.ui.show({ kind: 'title', quick: true, sound: 'select', html: '<h2>Begin again?</h2><p class="say">The saved tale will be erased.</p>', buttons: [{ label: 'Back', value: 'back' }, { label: 'Erase and begin', value: 'erase' }], onClose: (w) => { if (w === 'erase') { this.resetSave(); this.hadSave = false; } else this.title(); } });
@@ -116,15 +117,15 @@ export class Game {
   settingsMenu(back, sel = 0) {
     const st = this.settings, pct = (v) => Math.round(v * 100) + '%';
     this.ui.show({ kind: 'settings', quick: true, sound: 'select', sel, esc: 'back',
-      html: `<h2>Settings</h2><p class="say">Sound ${pct(st.sound)} &nbsp; Music ${pct(st.music)} &nbsp; Screen shake ${st.shake ? 'on' : 'off'}</p>`,
-      buttons: [{ label: 'Sound -', value: 's-' }, { label: 'Sound +', value: 's+' }, { label: 'Music -', value: 'm-' }, { label: 'Music +', value: 'm+' }, { label: 'Shake', value: 'sh' }, { label: 'Back', value: 'back' }],
+      html: `<h2>Settings</h2><p class="say">Sound ${pct(st.sound)} &nbsp; Music ${pct(st.music)} &nbsp; Screen shake ${st.shake ? 'on' : 'off'} &nbsp; Lighting ${st.light ? 'full' : 'simple'}</p>`,
+      buttons: [{ label: 'Sound -', value: 's-' }, { label: 'Sound +', value: 's+' }, { label: 'Music -', value: 'm-' }, { label: 'Music +', value: 'm+' }, { label: 'Shake', value: 'sh' }, { label: 'Lighting', value: 'li' }, { label: 'Back', value: 'back' }],
       onClose: (v) => {
         const step = (x, d) => Math.round(clamp(x + d, 0, 1) * 10) / 10;
         if (v === 's-') st.sound = step(st.sound, -0.1); else if (v === 's+') st.sound = step(st.sound, 0.1);
         else if (v === 'm-') st.music = step(st.music, -0.1); else if (v === 'm+') st.music = step(st.music, 0.1);
-        else if (v === 'sh') st.shake = !st.shake;
+        else if (v === 'sh') st.shake = !st.shake; else if (v === 'li') st.light = !st.light;
         this.sfx.setVolume(st.sound); this.sfx.setMusicVolume(st.music); writeSettings(this.storage, st);
-        if (v === 'back') back(); else this.settingsMenu(back, ['s-', 's+', 'm-', 'm+', 'sh'].indexOf(v));
+        if (v === 'back') back(); else this.settingsMenu(back, ['s-', 's+', 'm-', 'm+', 'sh', 'li'].indexOf(v));
       } });
   }
   has(id) { return this.save.powers.includes(id); }
@@ -243,7 +244,7 @@ export class Game {
   doorState(l) {
     if (l.after && !this.flag('boss' + l.after)) return 'hidden';
     if (l.act) return 'open';
-    if (!l.to) return 'sealed';
+    if (!l.to || (this.demo && l.look === 'gateway' && l.n > this.demo)) return 'sealed';
     if (l.needs && !this.has(l.needs)) return 'locked';
     if (l.look === 'gateway' && this.flag('boss' + l.n)) return 'done';
     if (l.look === 'arena' && this.flag('boss' + this.region.id)) return 'done';
@@ -252,7 +253,7 @@ export class Game {
   useDoor(l) {
     const st = this.doorState(l);
     if (this.bossActive()) { this.banner2('NO WAY OUT BUT THROUGH HIM'); this.sfx.play('locked'); return; }
-    if (st === 'sealed') { this.banner2('THIS GATE IS NOT YET OPEN'); this.sfx.play('locked'); return; }
+    if (st === 'sealed') { this.banner2(this.demo ? 'BEYOND THIS DEMO' : 'THIS GATE IS NOT YET OPEN'); this.sfx.play('locked'); return; }
     if (st === 'locked') { this.banner2('SEALED. ' + POWERS.find((q) => q.id === l.needs).name.toUpperCase() + ' OPENS IT'); this.sfx.play('locked'); return; }
     if (l.act === 'saul') { this.saul(); return; }
     this.go(l);
@@ -324,7 +325,11 @@ export class Game {
     if (!this.has(id)) this.save.powers.push(id);
     this.room.shield = this.has('shield');
     this.relic = null; this.persist(); this.sfx.setMusic('field', this.region.id);
-    this.ui.power(id, () => this.banner2(id === 'valor' ? (this.save.tally >= TALLY_GOAL ? 'THE TALE IS FULL. RETURN TO SAUL' : `${this.save.tally} OF 200. THE TALE IS NOT YET FULL`) : 'THE WAY BACK TO CAMP IS OPEN', 4));
+    const demoEnd = this.demo && POWERS[this.demo - 1] && id === POWERS[this.demo - 1].id;
+    this.ui.power(id, () => {
+      if (demoEnd) this.ui.scene('demoEnd', [{ title: 'The End of the Demo', text: [`David has brought ${this.save.tally} of the ${this.demo * 20} trophies in these ${this.demo === 1 ? 'hills' : 'first ' + this.demo + ' regions'}. The rest of the tale lies beyond the sealed gateways.`, 'Thank you for playing. You can keep exploring: the new power opens places you have already passed.'] }], [{ label: 'Keep playing', value: 'ok' }], null, { tally: this.save.tally });
+      else this.banner2(id === 'valor' ? (this.save.tally >= TALLY_GOAL ? 'THE TALE IS FULL. RETURN TO SAUL' : `${this.save.tally} OF 200. THE TALE IS NOT YET FULL`) : 'THE WAY BACK TO CAMP IS OPEN', 4);
+    });
   }
   summon(boss, n, kind) {
     for (let i = 0; i < n; i++) {
@@ -441,7 +446,14 @@ export class Game {
   }
 
   // ------------------------------------------------------------ render
+  // On a phone that cannot keep up, drop the pools of light (the costly part of a frame) once, and say so.
+  autoLight(fps, el) {
+    if (!this.settings.light || this.ui.open) return;
+    this.slow = fps < 42 ? this.slow + el : 0;
+    if (this.slow > 4) { this.settings.light = false; writeSettings(this.storage, this.settings); this.banner2('LIGHTING SIMPLIFIED TO KEEP THE GAME SMOOTH (SETTINGS)', 5); }
+  }
   light(x, y, r, rgb, a) {
+    if (!this.settings.light) return;
     const l = this.lctx, gr = l.createRadialGradient(x, y, 0, x, y, r);
     gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(0.5, `rgba(${rgb},${a * 0.42})`); gr.addColorStop(1, `rgba(${rgb},0)`);
     l.fillStyle = gr; l.fillRect(x - r, y - r, r * 2, r * 2);
@@ -542,7 +554,7 @@ export class Game {
     if (p.charging && !p.dead) this.drawAimArc(ctx, cx, cy);
     if (this.boss && (this.boss.state === 'tele')) drawText(ctx, '!', Math.round(this.boss.cx - cx) - 1, Math.round(this.boss.y - cy) - 26, '#ff6a4a', 2);
     if (this.nearDoor && !this.bossActive()) {
-      const l = this.nearDoor, st = this.doorState(l), s = st === 'locked' || st === 'sealed' ? 'SEALED' : 'UP: ' + (l.label || (l.look === 'gateway' ? (regionById(l.n) ? regionById(l.n).name.toUpperCase() + '  ' + this.tracker()[l.n - 1].got + '/20' : 'UNKNOWN') : 'ENTER'));
+      const l = this.nearDoor, st = this.doorState(l), s = st === 'locked' || st === 'sealed' ? 'SEALED' : (this.touch ? 'PUSH UP: ' : 'UP: ') + (l.label || (l.look === 'gateway' ? (regionById(l.n) ? regionById(l.n).name.toUpperCase() + '  ' + this.tracker()[l.n - 1].got + '/20' : 'UNKNOWN') : 'ENTER'));
       const dx = Math.round(l.cx * T + 8 - cx - textWidth(s) / 2), dy = (l.cy + 1) * T - cy - (l.look === 'gateway' ? 60 : l.look === 'saul' ? 62 : 46);
       drawText(ctx, s, clamp(dx, 2, W - textWidth(s) - 2), dy, st === 'locked' || st === 'sealed' ? '#c98b3f' : '#ffe9a0', 1);
     }
@@ -612,7 +624,7 @@ export class Game {
       ctx.fillStyle = b.flash > 0 ? '#ffffff' : '#d8362e'; ctx.fillRect(bx, by, Math.round(bw * f), 4); ctx.fillStyle = '#ff9a7a'; ctx.fillRect(bx, by, Math.round(bw * f), 1);
       ctx.fillStyle = '#ffd680'; ctx.fillRect(bx + bw / 2, by - 1, 1, 6);
     }
-    if (this.save.played < 30 && !this.boss) {
+    if (this.save.played < 30 && !this.boss && !this.touch) {
       const s = 'MOVE: ARROWS   JUMP: Z   SLING: HOLD X, RELEASE';
       ctx.globalAlpha = clamp(30 - this.save.played, 0, 1) * 0.9;
       drawText(ctx, s, Math.round((W - textWidth(s)) / 2), H - 14, '#d9cba8', 1);
