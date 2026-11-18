@@ -1,34 +1,64 @@
 // Region 2: the terraces of Socoh. Captain: Ittur. Power: Hind's Feet (double jump).
 // Entered with Fleet Foot, so reed screens stand on the main path.
-import { room, seg, arena } from './pieces.js';
-const campDoor = (n) => ['camp', 4, `0/camp/d${n}`, { look: 'path', label: "TO SAUL'S CAMP" }];
+// Hand-built (2026-11-18). 20 marked: 14 open; one each behind a high rock (double jump), a cracked
+// slab (pound), a tall tower (climb), a ring perch (cord), a bound door (heavy), a spear hedge (buckler).
+import { RB } from '../world/build.js';
+import { hut, tower, cellar, perch, wall, arena } from './pieces.js';
+
+function vineyard() {
+  const r = new RB('vineyard', 'Socoh Terraces', 120, 40);
+  r.land(0, 119, 30).land(20, 119, 28).land(40, 99, 26).land(60, 79, 24).walls();   // terraces up to the crest and down again
+  r.door('camp', 4, 29, '0/camp/d2', { look: 'path', label: "TO SAUL'S CAMP" });
+  r.puts('t', [8, 29]).puts('s', [12, 29]);
+  r.fill(22, 23, 29, 23).plank(31, 32, 25);                    // a trellis walk over the first terrace
+  r.puts('M', [25, 22]).puts('A', [34, 27]).puts('t', [37, 27]);
+  hut(r, 44, 26, '1');
+  r.puts('s', [57, 25]);
+  r.puts('M', [63, 23]).puts('s', [68, 23]);
+  tower(r, 73, 5, 24, 5, 'double');
+  cellar(r, 84, 26);
+  r.puts('A', [95, 25]).puts('t', [97, 25]);
+  r.clear(104, 28, 111, 29).back(104, 28, 111, 29).plank(106, 109, 28);   // a treading vat, two deep
+  r.puts('a', [107, 29]).puts('t', [114, 27]);
+  r.exit('R', 'east', 27, 'presses/west');
+  return r.done();
+}
+
+function presses() {
+  const r = new RB('presses', 'The Wine Presses', 120, 40);
+  r.land(0, 119, 28).land(76, 95, 25).walls();
+  r.exit('L', 'west', 27, 'vineyard/east');
+  r.puts('t', [6, 27]).puts('s', [10, 27]).puts('M', [18, 27]);
+  perch(r, 35, 28);
+  r.puts('t', [45, 27]);
+  r.clear(52, 28, 60, 30).back(52, 28, 60, 30).plank(55, 57, 28);   // the great vat, three deep
+  r.puts('M', [54, 30]).puts('t', [59, 30]).puts('H', [69, 27]).puts('t', [72, 27]);
+  hut(r, 81, 25, '9');
+  r.puts('A', [93, 24]);
+  r.fill(100, 23, 107, 23).plank(109, 110, 25);                // a loft over the last press
+  r.puts('M', [103, 22]).puts('s', [106, 27]).puts('A', [113, 27]).puts('t', [111, 27]);
+  wall(r, 116, 28, '1');
+  r.exit('R', 'east', 27, 'watch/west');
+  return r.done();
+}
+
+function watch() {
+  const r = new RB('watch', 'The Watchtower', 120, 40);
+  r.land(0, 119, 30).land(20, 39, 27).land(60, 79, 27).walls();
+  r.exit('L', 'west', 29, 'presses/east');
+  r.puts('t', [6, 29]).puts('s', [12, 29]);
+  r.puts('M', [24, 26]).puts('A', [34, 26]).puts('t', [29, 26]);
+  tower(r, 43, 7, 30, 16, 'climb');
+  r.puts('s', [55, 29]);
+  hut(r, 65, 27, '6');
+  r.puts('M', [86, 29]).puts('t', [89, 29]);
+  r.land(92, 95, 29).land(93, 94, 28);                         // a fallen wall
+  r.puts('s', [98, 29]).puts('t', [104, 29], [116, 29]);
+  r.door('arena', 110, 29, 'arena/in', { look: 'arena', label: "ITTUR'S GROUND" });
+  return r.done();
+}
 
 export const region2 = {
   id: 2, name: 'Socoh Terraces', theme: 'terraces', complete: true, start: 'vineyard',
-  rooms: [
-    room('vineyard', 'Socoh Terraces', 40, [
-      seg(20, 30, { door: campDoor(2), t: [8], s: [12] }),
-      seg(20, 28, { A: [14], t: [10], deck: [3, 10], at: ['M', 6, 5] }),
-      seg(20, 26, { hut: [4, '1'], s: [17] }),
-      seg(20, 24, { M: [4], s: [9], tower: [13, 5, 5, 'double'] }),
-      seg(20, 26, { cellar: [4], A: [15], t: [17] }),
-      seg(20, 28, { t: [8], deck: [8, 15], at: ['a', 12, 5] }),
-    ], { R: ['east', 'presses/west'] }),
-    room('presses', 'The Wine Presses', 40, [
-      seg(26, 28, { t: [6], s: [10], M: [18] }),
-      seg(22, 28, { perch: [9], t: [19] }),
-      seg(28, 28, { pit: [6, 3], M: [14], H: [21], t: [17] }),
-      seg(20, 25, { hut: [5, '9'], A: [17] }),
-      seg(24, 28, { t: [10], s: [14], A: [17], wall: [20, '1'], deck: [3, 10], at: ['M', 6, 5] }),
-    ], { L: ['west', 'vineyard/east'], R: ['east', 'watch/west'] }),
-    room('watch', 'The Watchtower', 40, [
-      seg(20, 30, { t: [6], s: [12] }),
-      seg(20, 27, { M: [4], A: [14] }),
-      seg(20, 30, { tower: [3, 7, 16, 'climb'], s: [15] }),
-      seg(20, 27, { hut: [5, '6'] }),
-      seg(20, 30, { t: [9], s: [12], deck: [3, 10], at: ['M', 6, 5] }),
-      seg(20, 30, { door: ['arena', 10, 'arena/in', { look: 'arena', label: "ITTUR'S GROUND" }], t: [6, 14] }),
-    ], { L: ['west', 'presses/east'] }),
-    arena(2, "Ittur's Ground", 'watch/arena'),
-  ],
+  rooms: [vineyard(), presses(), watch(), arena(2, "Ittur's Ground", 'watch/arena')],
 };

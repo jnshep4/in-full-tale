@@ -13,7 +13,6 @@ Provisional: Claude estimated it on 2026-11-18 from the session's own rate-limit
   - Gamepad support is written to the standard mapping but has never been tried with a physical pad: this environment has none.
   - The control hint bar shows for the first 30 seconds of play time on a save and lists only the starting controls; each power's card and the pause sheet give the rest.
   - Captains can be fought from high planks, walls, rings, or the cistern, out of reach of thrusts and ground waves. They stand off, leap up to 8 tiles, throw, and shake a clinging David off the wall (at most every 7 seconds). Maroz from the wall and Yishvar from the cistern remain the safest fights; that is where their weaknesses point.
-  - Regions 2-10 are assembled from a kit of set pieces on stepped ground, with hashed ditches, mounds, stake pits, planks and scenery between them. They are sound and fully tested, but less hand-crafted than region 1.
   - The music is generated and simple: one plucked line, a drone, a drum under captains.
   - No human has played it. Every check was made by script and by looking at screenshots.
 - **This run's meter total:** 7,734,097 units of the 18,900,000 budget (stop line 17,010,000). Telemetry: `seven_day` 8% at start, 12% at the end; `seven_day_overage_included` 9% at start, 16% at the end.
@@ -39,9 +38,11 @@ James asked to start on the remaining ideas from the final summary. Done so far,
 - **Music.** A four-bar bass progression, an answering second voice on the repeat, a held reed under the tune, and a lead that is a lyre, a reed pipe or a flute depending on the region. Still generated in `src/audio.js`.
 - **Hand-built rooms.** Regions 5, 6, 8, 9 and 10 are now built by hand with `RB`, like region 1, using the set pieces only for their gated secrets: trenches and a plank watchtower (5), two-storey houses and a sunken press yard (6), piers over deep water and a ship with a ring in her rigging (8), twin gate towers with a walk between and a seven-deep cistern (9), a stair of terraces and a fourteen-high fortress wall (10). Each kept its 20 soldiers and its gate plan, and the reach test passed unchanged.
 
-**Still to do if wanted:** regions 2, 3, 4 and 7 are still segment-built (with decks, variation and scenery). `tests/play/m3.cjs` and `m4.cjs` place David at fixed cells in region 2 (vineyard tower 71,23; cellar 84,25; watchtower 41,29; presses perch 31,27 and its heavy), region 3 (descent thorn hut 43,31), region 4 (thicket lions) and region 7 (quarter archer), so rebuilding those rooms means moving those test coordinates too.
+**Regions 2, 3, 4 and 7** were then rebuilt by hand as well, so all ten regions are hand-built with `RB` and `src/data/pieces.js` now supplies only the gated set pieces and the arenas (its `room()`/`seg()`/`vary()`/`deck()` maker is unused but kept). The set pieces the tests stand David beside were kept at the same cells (region 2: vineyard tower 73-77 on ground row 24, cellar at 84, watchtower at 43-49, presses perch at 35; region 3: thorn hut at 45), so no test coordinates moved. New shapes: a trellis walk, a treading vat and a loft (2); a climb down the gorge wall by ledges and hanging rock in the caves (3); a ten-high cliff, boughs, and a lions' den tunnelled under a rise (4); the house of Dagon with its roof and the terraces of the upper city (7).
 
-Meter at this point: 10,761,823 units of the 17,010,000 stop line. Whole suite green: 215 playthrough checks, verse test, reach test.
+Meter at this point: 11,289,440 units of the 17,010,000 stop line. Whole suite green: 215 playthrough checks, verse test, reach test (200 trophies; 105 with the powers of regions 1-5; all 200 with every power).
+
+**For play testers:** https://jnshep4.github.io/in-full-tale/ (desktop browser, keyboard or gamepad; progress saves in that browser only). No session has been able to load the live site since milestone 1, so James should open it once before sharing.
 
 ## Final summary (2026-11-18)
 
@@ -90,6 +91,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | milestone 5 and final summary (read just before committing) | 7,734,097 |
 | 2 | after James's playtest: level sling, rings, decks (read just before committing) | 9,814,982 |
 | 2 | map, music, hand-built regions 5, 6, 8, 9, 10 (read just before committing) | 10,761,823 |
+| 2 | hand-built regions 2, 3, 4, 7 (read just before committing) | 11,289,440 |
 
 ## Calibration
 
@@ -156,7 +158,7 @@ Environment facts learned in run 1: the session started with no repository attac
 - `src/ent/`: `player.js` (David; `PHYS`, `DASH`, `SLING`), `stone.js` (carries `tags` such as `full`, read by captains for the weakness chain), `soldier.js`, `trophy.js`, `boss.js` (`Boss`, driven by a config; `Shot`, every hostile missile and ground wave).
 - `src/gfx/`: `bg.js` (one entry per theme in `THEMES`; ridge, city and sea painters), `tiles.js` (pre-rendered tile layer and cave backing; one palette per theme in `PAL`), `chars.js` (rig-drawn David, soldier kinds, lion, captain, Goliath, Israelite; the ring), `props.js` (gate tiles, water, doorways, camp props, the relic), `decor.js` (scenery and its scattering).
 - `src/world/`: `room.js` (tile kinds, map parsing, collision), `build.js` (`RB`, the room builder; `parseTo`), `reach.js` (the two reachability models and the world flood).
-- `src/data/`: `verses.js`, `powers.js`, `bosses.js` (captain configs), `regions.js` (index; region 0 is the hub), `hub.js`, `r1.js`, `r5.js`, `r6.js`, `r8.js`, `r9.js`, `r10.js` (hand-built with `RB`), `pieces.js` (set pieces, the segment-based `room()` maker, `arena()`), `r2.js`, `r3.js`, `r4.js`, `r7.js` (segment-built with `pieces.js`).
+- `src/data/`: `verses.js`, `powers.js`, `bosses.js` (captain configs), `regions.js` (index; region 0 is the hub), `hub.js`, `r1.js` to `r10.js` (all hand-built with `RB`), `pieces.js` (set pieces, the segment-based `room()` maker, `arena()`).
 - `src/audio.js` (Web Audio synth: effects and the generated music), `src/input.js` (keyboard and gamepad), `src/font.js` (3x5 pixel font, capitals only), `src/save.js`, `src/debug.js`.
 - `tests/`: `verses.test.mjs`, `reach.test.mjs`, `serve.mjs`, `play/helpers.cjs` (harness, `window.bot` with `walkTo`, `fight`, `fightBoss`, and `overview`), `play/m1.cjs`, `play/m2.cjs`, `play/m3.cjs` (takes an optional section: `powers`, `soldiers`, `bosses`, `story`; the whole file runs about four minutes), `play/m4.cjs` (sections `powers`, `bosses`, `story`), `play/m5.cjs`, `play/look.cjs`. `m3.cjs bosses 4` or `m4.cjs bosses 6` runs a single captain. The whole suite takes about 15 minutes.
 - `tools/meter.py`. (`tools/roomgen.py` is superseded by `src/world/build.js` and kept only as the record of how the first room was made.)
