@@ -120,7 +120,7 @@ export function renderRoom(room, theme) {
 
   for (let cy = 0; cy < room.h; cy++) for (let cx = 0; cx < room.w; cx++) {
     const t = room.tile(cx, cy), X = cx * T, Y = cy * T;
-    if (t === SOLID && cy > 0 && room.tile(cx, cy - 1) !== SOLID) {
+    if (t === SOLID && cy > 0 && room.tile(cx, cy - 1) !== SOLID && !(room.backs || []).some(([bx0, by0, bx1, by1]) => cx >= bx0 && cx <= bx1 && cy - 1 >= by0 && cy - 1 <= by1)) {
       // Dry grass, and the odd red anemone, along every walkable top.
       for (let px = 0; px < T; px++) {
         const n = hash2(X + px, Y, 31);

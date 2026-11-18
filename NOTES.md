@@ -6,18 +6,18 @@ Provisional: Claude estimated it on 2026-11-18 from the session's own rate-limit
 ## Handoff (update after every commit)
 
 - **Current run:** run 2, started 2026-11-18 10:14 UTC. Telemetry at start: `seven_day` 8%, `seven_day_overage_included` 9%. Second-guard stop values: 53% and 54%.
-- **Milestone status:** 1, 2, 3 done and pushed. 4 in progress: region files `r6.js` to `r10.js`, five city themes, and the mechanics of powers 6-10 are written; see "Next steps". 5 not started.
+- **Milestone status:** 1, 2, 3, 4 done and pushed. 5 in progress: title screen, pause sheet, settings, music, scenery, and a balance pass are in and tested (`tests/play/m5.cjs`); a terrain-variety pass for regions 2-10 is the last item.
 - **Blocked on James (one-time, about 30 seconds):** GitHub Pages is not switched on. The session cannot do it (the Pages API is closed to it). In the repo: Settings > Pages > Source "Deploy from a branch" > branch `claude/in-full-tale`, folder `/ (root)` > Save. The game will then be at https://jnshep4.github.io/in-full-tale/. The branch already carries `.nojekyll` and needs no build step. Check with `gh api repos/jnshep4/in-full-tale --jq .has_pages`.
 - **Optional, from James (better calibration):** after any run, read the Fable weekly meter on the usage page and add a line under "Readings from James". Until then the provisional RUN_BUDGET stands.
 - **Next steps, in priority order:**
-  1. Milestone 4: wire regions 6-10 into `src/data/regions.js` and `REGION_ENTRY` in `src/data/hub.js`; captains 6-10 in `src/data/bosses.js`; Ending B in `game.js` (`saul()` already offers it when the tally is 200 and `boss10` is set); `tests/play/m4.cjs` covering powers 6-10 at their gates, captains 6-10, their verse cards, and Ending B with the 1 Samuel 18:27 text read back from the page. The reachability test turns on its final 200-trophy checks by itself once all ten regions are flagged complete.
-  2. Milestone 5: title screen, music, settings, balance.
+  1. Finish milestone 5: vary the ground in regions 2-10 (ditches, mounds, stake pits, planks) without disturbing the gates, rerun the whole suite, push.
+  2. Write the final summary and mark the build complete.
 - **Known bugs and rough edges:**
-  - The control hint bar shows for the first 30 seconds of play time on a save and has no "seen" flag. It lists only the starting controls; each power's card gives its own.
-  - No title screen, music, or settings yet (milestone 5). Audio starts on the first key press.
-  - Grass is drawn on floors inside caves and huts. The Caves of Sorek are very dark away from torches.
-  - Captains can be fought from high planks or walls, out of reach of thrusts and ground waves. They now stand off rather than wait underneath, and still leap and throw. Maroz in particular is safest from the wall, which is his stated weakness.
-  - Regions 2-5 are built from a small kit of set pieces (hut, tower, cellar, flooded chamber, ring perch, gated wall) on stepped ground. They are sound and tested but plain; a polish pass could add planks, pits and more varied ground.
+  - The control hint bar shows for the first 30 seconds of play time on a save and has no "seen" flag. It lists only the starting controls; each power's card and the pause sheet give the rest.
+  - Captains can be fought from high planks, walls, rings, or the cistern, out of reach of thrusts and ground waves. They stand off, leap as high as 8 tiles, throw, and shake a clinging David off the wall (at most every 7 seconds). Maroz from the wall and Yishvar from the cistern are still the safest fights; that is where their weaknesses point.
+  - Regions 2-10 are built from a small kit of set pieces on stepped ground. They are sound and tested but plain.
+  - Gamepad support is written to the standard mapping but has never been tried with a physical pad: this environment has none.
+  - The music is generated and simple: one plucked line, a drone, a drum under captains.
 - **This run's meter total:** see the Meter log; last reading is the newest row.
 - **Estimated runs remaining:** revise at the end of run 2.
 
@@ -50,6 +50,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | run start, 2026-11-18 10:14 UTC (telemetry: seven_day 8%, overage_included 9%) | 119,194 |
 | 2 | milestone 2 (read just before committing) | 1,624,926 |
 | 2 | milestone 3 (read just before committing) | 4,247,808 |
+| 2 | milestone 4 (read just before committing) | 6,727,700 |
 
 ## Calibration
 
@@ -105,7 +106,7 @@ Environment facts learned in run 1: the session started with no repository attac
 - `src/world/`: `room.js` (tile kinds, map parsing, collision), `build.js` (`RB`, the room builder; `parseTo`), `reach.js` (the two reachability models and the world flood).
 - `src/data/`: `verses.js`, `powers.js`, `bosses.js` (captain configs), `regions.js` (index; region 0 is the hub), `hub.js`, `r1.js` (hand-built with `RB`), `pieces.js` (set pieces, the segment-based `room()` maker, `arena()`), `r2.js` to `r10.js` (built with `pieces.js`).
 - `src/audio.js` (Web Audio synth), `src/input.js` (keyboard and gamepad), `src/font.js` (3x5 pixel font, capitals only), `src/save.js`, `src/debug.js`.
-- `tests/`: `verses.test.mjs`, `reach.test.mjs`, `serve.mjs`, `play/helpers.cjs` (harness, `window.bot` with `walkTo`, `fight`, `fightBoss`, and `overview`), `play/m1.cjs`, `play/m2.cjs`, `play/m3.cjs` (takes an optional section: `powers`, `soldiers`, `bosses`, `story`; the whole file runs about four minutes), `play/look.cjs`.
+- `tests/`: `verses.test.mjs`, `reach.test.mjs`, `serve.mjs`, `play/helpers.cjs` (harness, `window.bot` with `walkTo`, `fight`, `fightBoss`, and `overview`), `play/m1.cjs`, `play/m2.cjs`, `play/m3.cjs` (takes an optional section: `powers`, `soldiers`, `bosses`, `story`; the whole file runs about four minutes), `play/m4.cjs` (sections `powers`, `bosses`, `story`), `play/m5.cjs`, `play/look.cjs`. `m3.cjs bosses 4` or `m4.cjs bosses 6` runs a single captain. The whole suite takes about 15 minutes.
 - `tools/meter.py`. (`tools/roomgen.py` is superseded by `src/world/build.js` and kept only as the record of how the first room was made.)
 
 ## Level format
@@ -130,7 +131,7 @@ A region is `{ id, name, theme, complete, start, rooms }` in `src/data/rN.js`, l
 
 Links: `to` is `'region/room/link'` or `'room/link'` inside the region. Options: `needs` (power id), `after` (hidden until that region's captain has fallen), `look` (`gateway`, `saul`, `arena`, `path`), `label`, `act`. A room with `boss: N` holds captain N at its `B` cell. Opened gate tiles are saved in `save.gates` and stay open.
 
-How each gate opens in play: reed screens break when dashed into; cracked slabs break under a ground pound (down + jump in the air); thorns fall to a sword stroke; spear hedges stop being solid once the buckler is carried; bound doors shatter when a full-charge stone hits them after Smooth Stone is earned; deep water stops sweeping David back once he has Deep Breath; rings answer the cord key (V or I, gamepad LB). Powers 2-5 are covered by `tests/play/m3.cjs` at real gates; powers 6-10 are written but not yet exercised by a playthrough.
+How each gate opens in play: reed screens break when dashed into; cracked slabs break under a ground pound (down + jump in the air); thorns fall to a sword stroke; spear hedges stop being solid once the buckler is carried; bound doors shatter when a full-charge stone hits them after Smooth Stone is earned; deep water stops sweeping David back once he has Deep Breath; rings answer the cord key (V or I, gamepad LB). Powers 2-5 are exercised at real gates by `tests/play/m3.cjs` and powers 6-10 by `tests/play/m4.cjs`.
 
 Rooms from region 2 on are a row of segments: `seg(width, groundTopRow, items)`, with items placed by column offset: `M A H s a h l t` (lists of columns), `hut: [col, gateChar, kind, flip]`, `tower: [col, width, height, power, kind]`, `cellar: [col, kind]`, `sunk: [col, kind]`, `perch: [col, kind]`, `wall: [col, gateChar]`, `moat: [col]`, `pit: [col, width]`, `pool`, `plank: [col0, col1, rowsUp]`, `at: [char, col, rowsUp]`, `door: [id, col, to, opts]`. Placement rules that keep the gates honest are at the top of `pieces.js`; the reach test enforces them, so a failed "can be passed without" message means a set piece stands too close to higher footing or a tall wall.
 
@@ -208,6 +209,18 @@ One line per choice, newest last.
 - 2026-11-18: David catches a wall only once he has stopped rising, so jumping up a low step with Rock Hold is not interrupted.
 - 2026-11-18: A captain whose target is overhead and out of reach stands off about seven tiles and picks from his leaps, volleys, and summons; his leap rises as high as it must to reach.
 - 2026-11-18: Regions 2-5 each follow the plan: 14 soldiers open on entry, 3 behind powers earned later in regions 1-5, 3 behind powers 6-9.
+
+- 2026-11-18: Regions 6-10: Ekron (all 20 soldiers need only powers 1-5, which is what makes 105 trophies reachable before any later power), Ashdod (17 open, then swim, grapple, heavy), Ashkelon (17 open, swim, heavy, heavy), Gaza (17 open, heavy x3), Gath (all 20 open). The main path of each uses the power it is entered with: thorn walls, spear-hedge walls, rings, moats to dive under, bound doors.
+- 2026-11-18: Final placement, proven by `tests/reach.test.mjs`: 200 trophies; 105 reachable with the powers of regions 1-5 in the conservative model and no more than 105 in the optimistic one; all 200 with every power.
+- 2026-11-18: Captains 6-10 (all names invented): Akhtal (weak to the sword; a sword stroke staggers him every 3 seconds), Zeruk (weak to his own missiles turned by the buckler, 3 damage doubled), Banith (weak to stones loosed from the cord; rings hang in his arena), Yishvar (weak to stones loosed from the cistern in the middle of his arena, which captains will not enter), Seren Orphaz (300 health, seven attacks; weak to the Smooth Stone, which by then is every full-charge shot).
+- 2026-11-18: Ending B: with 200 and Seren Orphaz fallen, Saul's tent offers "Give them in full tale". Two cards; the last shows only the title "Ending B" and 1 Samuel 18:27 with its reference and "(KJV)". Play can continue afterward.
+- 2026-11-18: The relic drops where the captain first stood (solid ground in every arena), not at the room's centre.
+- 2026-11-18: Captains fall through planks and will not step off a ledge or into water. A leap that would land in water is shortened.
+- 2026-11-18: David cannot cling above the top of a room. (Found when the wall bot climbed out of Maroz's arena.)
+- 2026-11-18: Each scripted fight attempt runs on its own fixed random seed, so results repeat. Last full run, all unassisted: Shalmek 1st attempt, Ittur 1st, Pashdu 4th, Maroz 1st (wall), Goliath 1st, Akhtal 1st (sword), Zeruk 1st (reflect), Banith 1st, Yishvar 1st (cistern), Seren Orphaz 1st with 6 of 14 health left.
+- 2026-11-18: After David falls to a captain, the captain's weakness is shown as a line of advice when the fight restarts.
+- 2026-11-18: Title screen, pause sheet (Esc: per-region trophy counts, captains fallen, the controls of each power held), settings (sound, music, screen shake; saved under their own key so erasing a save keeps them), generated music (camp, field, captain; root and tune shift by region). Gateways in camp show each region's count.
+- 2026-11-18: Scenery (`src/gfx/decor.js`): trees, vines, jars, columns, braziers, pennons and the like are scattered over open ground by a fixed hash, per theme. Nothing in it collides.
 
 ## Liberties taken with the text
 

@@ -2,7 +2,7 @@
 import { W, H, T, TALLY_GOAL, clamp, rng } from './core.js';
 import { Input } from './input.js';
 import { Sfx } from './audio.js';
-import { loadSave, writeSave, freshSave, clearSave } from './save.js';
+import { loadSave, writeSave, freshSave, clearSave, loadSettings, writeSettings, hasSave } from './save.js';
 import { REGIONS, regionById } from './data/regions.js';
 import { parseRoom, moveBody, AIR, REED, WATER, RING, GATE_POWER } from './world/room.js';
 import { parseTo } from './world/build.js';
@@ -23,7 +23,7 @@ import { Trophy } from './ent/trophy.js';
 function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; }
 
 export class Game {
-  constructor(canvas, { storage = null, seed = 20261117, ui = null, at = null } = {}) {
+  constructor(canvas, { storage = null, seed = 20261117, ui = null, at = null, title = false } = {}) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.ctx.imageSmoothingEnabled = false;
     [this.world, this.wctx] = mk(W, H);       // tiles and bodies, before lighting
     [this.lightC, this.lctx] = mk(W, H);      // light map
@@ -31,7 +31,8 @@ export class Game {
     this.vignette = this.makeVignette();
     this.input = new Input(); this.sfx = new Sfx();
     this.input.onAny = () => this.sfx.unlock();
-    this.storage = storage; this.save = loadSave(storage);
+    this.storage = storage; this.hadSave = hasSave(storage); this.save = loadSave(storage);
+    this.settings = loadSettings(storage); this.sfx.setVolume(this.settings.sound); this.sfx.setMusicVolume(this.settings.music);
     this.rand = rng(seed);
     this.time = 0; this.frame = 0; this.hitstop = 0; this.shake = 0; this.cam = { x: 0, y: 0 };
     this.res = { hx: 0, hy: 0 };
@@ -41,6 +42,49 @@ export class Game {
     this.ui = new UI(ui || document.createElement('div'), this);
     if (at) { const [r, m] = at.split('/'); this.save.at = { region: +r, room: m || null, link: null }; }
     this.loadRoom(this.save.at.region || 0, this.save.at.room, this.save.at.link);
+    if (title) this.title();
+  }
+
+  // ------------------------------------------------------------ menus
+  // Marked soldiers per region, for the tally sheet in the pause menu.
+  tracker() {
+    if (!this.markedIds) {
+      this.markedIds = {};
+      for (const r of REGIONS) if (r.id > 0) this.markedIds[r.id] = r.rooms.flatMap((d) => parseRoom(d, r.id).spawns.filter((sp) => sp.type === 'marked').map((sp) => sp.id));
+    }
+    return REGIONS.filter((r) => r.id > 0).map((r) => ({ id: r.id, name: r.name, got: this.markedIds[r.id].filter((id) => this.save.soldiers[id] === 'c').length, of: this.markedIds[r.id].length, captain: this.flag('boss' + r.id) }));
+  }
+  title() {
+    this.fade = 0; this.banner.t = 0;                      // the camp shows behind the title
+    const cont = this.hadSave && (this.save.played > 1 || this.save.tally > 0);
+    const buttons = cont ? [{ label: 'Continue', value: 'go' }, { label: 'New game', value: 'new' }, { label: 'Settings', value: 'set' }] : [{ label: 'Begin', value: 'go' }, { label: 'Settings', value: 'set' }];
+    this.ui.show({ kind: 'title', buttons, sound: 'select', quick: true,
+      html: '<h1>In Full Tale</h1><div class="orn"></div><p class="say">David, a sling, and the price King Saul has set.</p><p class="how">Arrows or WASD to move. Z or Space to jump. Hold X to whirl the sling, up and down to aim, release to loose. Up at a gateway to enter. Esc for the tally sheet and settings.</p>',
+      onClose: (v) => {
+        if (v === 'set') this.settingsMenu(() => this.title());
+        else if (v === 'new') this.ui.show({ kind: 'title', quick: true, sound: 'select', html: '<h2>Begin again?</h2><p class="say">The saved tale will be erased.</p>', buttons: [{ label: 'Back', value: 'back' }, { label: 'Erase and begin', value: 'erase' }], onClose: (w) => { if (w === 'erase') { this.resetSave(); this.hadSave = false; } else this.title(); } });
+      } });
+  }
+  pauseMenu() {
+    const rows = this.tracker().map((r) => `<tr><td>${r.id}. ${r.name}</td><td>${r.got} / ${r.of}</td><td>${r.captain ? 'captain fallen' : ''}</td></tr>`).join('');
+    const powers = '<div class="hows">' + POWERS.filter((q) => this.has(q.id)).map((q) => `<p class="how"><b>${q.name}.</b> ${q.how}</p>`).join('') + '</div>';
+    this.ui.show({ kind: 'pause', quick: true, sound: 'select', esc: 'resume', buttons: [{ label: 'Resume', value: 'resume' }, { label: 'Settings', value: 'set' }, { label: 'Title', value: 'title' }],
+      html: `<h2>The Tally: ${this.save.tally} of ${TALLY_GOAL}</h2><table class="sheet">${rows}</table>${powers}`,
+      onClose: (v) => { if (v === 'set') this.settingsMenu(() => this.pauseMenu()); else if (v === 'title') this.title(); } });
+  }
+  settingsMenu(back, sel = 0) {
+    const st = this.settings, pct = (v) => Math.round(v * 100) + '%';
+    this.ui.show({ kind: 'settings', quick: true, sound: 'select', sel, esc: 'back',
+      html: `<h2>Settings</h2><p class="say">Sound ${pct(st.sound)} &nbsp; Music ${pct(st.music)} &nbsp; Screen shake ${st.shake ? 'on' : 'off'}</p>`,
+      buttons: [{ label: 'Sound -', value: 's-' }, { label: 'Sound +', value: 's+' }, { label: 'Music -', value: 'm-' }, { label: 'Music +', value: 'm+' }, { label: 'Shake', value: 'sh' }, { label: 'Back', value: 'back' }],
+      onClose: (v) => {
+        const step = (x, d) => Math.round(clamp(x + d, 0, 1) * 10) / 10;
+        if (v === 's-') st.sound = step(st.sound, -0.1); else if (v === 's+') st.sound = step(st.sound, 0.1);
+        else if (v === 'm-') st.music = step(st.music, -0.1); else if (v === 'm+') st.music = step(st.music, 0.1);
+        else if (v === 'sh') st.shake = !st.shake;
+        this.sfx.setVolume(st.sound); this.sfx.setMusicVolume(st.music); writeSettings(this.storage, st);
+        if (v === 'back') back(); else this.settingsMenu(back, ['s-', 's+', 'm-', 'm+', 'sh'].indexOf(v));
+      } });
   }
   has(id) { return this.save.powers.includes(id); }
   flag(k) { return !!this.save.flags[k]; }
@@ -81,13 +125,14 @@ export class Game {
       else if (sp.type === 'boss' && this.room.boss) {
         const n = this.room.boss;
         this.bossSpawn = sp;
-        if (!this.flag('boss' + n)) this.boss = new Boss(BOSSES[n], sp, n);
+        if (!this.flag('boss' + n)) { this.boss = new Boss(BOSSES[n], sp, n); if (this.flag('fell' + n)) this.after(1.6, () => this.banner2(BOSSES[n].weakHint, 7)); }
         else if (!this.has(POWERS[n - 1].id)) this.spawnRelic(n);
       }
     }
     this.rings = [];
     for (let y = 0; y < this.room.h; y++) for (let x = 0; x < this.room.w; x++) if (this.room.tile(x, y) === RING) this.rings.push({ x: x * T + 8, y: y * T + 8 });
     this.fires = this.room.props.filter((q) => q.type === 'fire').map((q) => ({ x: q.cx * T + 8, y: (q.cy + 1) * T + 12, seed: q.cx * 0.7, fire: true }));
+    this.braziers = this.room.props.filter((q) => q.type === 'brazier').map((q) => ({ x: q.cx * T + 8, y: (q.cy + 1) * T, seed: q.cx * 0.9 }));
     const link = linkId ? this.room.link(linkId) : null;
     const s = link ? { cx: link.kind === 'edge' ? (link.side === 'L' ? 1 : this.room.w - 2) : link.cx, cy: link.cy, face: link.kind === 'edge' ? (link.side === 'L' ? 1 : -1) : 1 }
       : { cx: (this.room.start || { cx: 2 }).cx, cy: (this.room.start || { cy: 2 }).cy, face: 1 };
@@ -102,6 +147,7 @@ export class Game {
     this.lastName = this.room.name;
     this.fade = 1;
     this.persist();
+    this.sfx.setMusic(region.id === 0 ? 'camp' : this.boss ? 'boss' : 'field', region.id);
     if (region.id === 0) {
       if (this.flag('scene100')) this.room.props = [...this.room.props, { type: 'guard', cx: 25, cy: 17, face: -1 }];
       else if (this.flag('hundred')) this.after(1.0, () => this.messenger());
@@ -111,7 +157,10 @@ export class Game {
 
   // After David falls: back to where he entered the room, full health. Marked soldiers still standing
   // return to their posts, unmarked ones respawn, a captain starts over. The tally is untouched.
-  respawn() { this.loadRoom(this.region.id, this.room.id, this.save.at.link); }
+  respawn() {
+    if (this.room.boss && this.boss) this.save.flags['fell' + this.room.boss] = 1;      // next time, the scouts' advice is shown
+    this.loadRoom(this.region.id, this.room.id, this.save.at.link);
+  }
   persist() { writeSave(this.storage, this.save); }
   resetSave() { clearSave(this.storage); this.save = freshSave(); this.loadRoom(0, null); }
   chargeScale() { return this.save.powers.includes('valor') ? 0.5 : 1; }
@@ -217,7 +266,7 @@ export class Game {
       { title: 'Ending B', text: [], html: `<p class="verse-text">${ENDING_B_VERSE.text}</p><p class="verse-ref"><span class="ref">${ENDING_B_VERSE.ref}</span> <span class="tag">${VERSION_TAG}</span></p>` },
     ], [{ label: 'Keep playing', value: 'ok' }], null, { tally: this.save.tally });
   }
-  onBossDying(b) { this.shots.length = 0; for (const s of this.soldiers) if (s.summoned) s.die(this, 0); }
+  onBossDying(b) { this.sfx.setMusic(null); this.shots.length = 0; for (const s of this.soldiers) if (s.summoned) s.die(this, 0); }
   onBossFell(b) {
     const n = b.regionId;
     this.save.flags['boss' + n] = 1;
@@ -227,12 +276,12 @@ export class Game {
   }
   spawnRelic(n) {
     const sp = this.bossSpawn || this.room.start;
-    this.relic = { x: this.room.w * T / 2, y: (sp.cy + 1) * T - 20, power: POWERS[n - 1].id, t: 0 };
+    this.relic = { x: sp.cx * T + 8, y: (sp.cy + 1) * T - 20, power: POWERS[n - 1].id, t: 0 };       // where the captain first stood: always solid ground
   }
   grantPower(id) {
     if (!this.has(id)) this.save.powers.push(id);
     this.room.shield = this.has('shield');
-    this.relic = null; this.persist();
+    this.relic = null; this.persist(); this.sfx.setMusic('field', this.region.id);
     this.ui.power(id, () => this.banner2(id === 'valor' ? (this.save.tally >= TALLY_GOAL ? 'THE TALE IS FULL. RETURN TO SAUL' : `${this.save.tally} OF 200. THE TALE IS NOT YET FULL`) : 'THE WAY BACK TO CAMP IS OPEN', 4));
   }
   summon(boss, n, kind) {
@@ -271,8 +320,7 @@ export class Game {
     if (this.input.pressed.debug && this.onDebug) this.onDebug();
     if (this.modal) return;
     if (this.ui.open) { this.ui.update(this.input, dt); return; }
-    if (this.input.pressed.pause) this.paused = !this.paused;
-    if (this.paused) return;
+    if (this.input.pressed.pause) { this.pauseMenu(); return; }
     if (this.hitstop > 0) { this.hitstop -= dt; return; }
     this.time += dt; this.frame++; this.save.played += dt;
     if (this.fade > 0) this.fade = Math.max(0, this.fade - dt * 2);
@@ -359,7 +407,7 @@ export class Game {
 
   render() {
     const ctx = this.ctx, w = this.wctx, t = this.time, p = this.player;
-    const sh = this.shake > 0 ? this.shake : 0;
+    const sh = this.shake > 0 && this.settings.shake ? this.shake : 0;
     const cx = Math.round(this.cam.x + (sh ? (this.rand() - 0.5) * sh : 0)), cy = Math.round(this.cam.y + (sh ? (this.rand() - 0.5) * sh : 0));
     const on = (x, y, m = 40) => x > cx - m && x < cx + W + m && y > cy - m && y < cy + H + m;
 
@@ -397,6 +445,7 @@ export class Game {
     l.globalCompositeOperation = 'source-over'; l.fillStyle = this.backdrop.ambient; l.fillRect(0, 0, W, H);
     l.globalCompositeOperation = 'lighter';
     for (const o of this.torches) if (on(o.x, o.y, 110)) this.light(o.x - cx, o.y - 20 - cy, 92 + Math.sin(t * 11 + o.seed) * 4 + Math.sin(t * 23 + o.seed) * 2, '255,176,96', 0.95);
+    for (const o of this.braziers) if (on(o.x, o.y, 110)) this.light(o.x - cx, o.y - 16 - cy, 84 + Math.sin(t * 10 + o.seed) * 4, '255,170,90', 0.9);
     for (const o of this.fires) if (on(o.x, o.y, 130)) this.light(o.x - cx, o.y - 22 - cy, 110 + Math.sin(t * 9 + o.seed) * 6, '255,170,90', 1);
     for (const l of this.room.links) if (l.kind === 'door' && on(l.cx * T, l.cy * T, 80) && this.doorState(l) !== 'hidden') this.light(l.cx * T + 8 - cx, l.cy * T - 4 - cy, 44, l.look === 'saul' ? '255,190,110' : '255,200,150', l.look === 'saul' ? 0.9 : 0.45);
     if (this.relic) this.light(Math.round(this.relic.x - cx), Math.round(this.relic.y - cy), 70, '255,226,160', 1);
@@ -451,7 +500,7 @@ export class Game {
     if (p.charging && !p.dead) this.drawAimArc(ctx, cx, cy);
     if (this.boss && (this.boss.state === 'tele')) drawText(ctx, '!', Math.round(this.boss.cx - cx) - 1, Math.round(this.boss.y - cy) - 26, '#ff6a4a', 2);
     if (this.nearDoor && !this.bossActive()) {
-      const l = this.nearDoor, st = this.doorState(l), s = st === 'locked' || st === 'sealed' ? 'SEALED' : 'UP: ' + (l.label || (l.look === 'gateway' ? (regionById(l.n) ? regionById(l.n).name.toUpperCase() : 'UNKNOWN') : 'ENTER'));
+      const l = this.nearDoor, st = this.doorState(l), s = st === 'locked' || st === 'sealed' ? 'SEALED' : 'UP: ' + (l.label || (l.look === 'gateway' ? (regionById(l.n) ? regionById(l.n).name.toUpperCase() + '  ' + this.tracker()[l.n - 1].got + '/20' : 'UNKNOWN') : 'ENTER'));
       const dx = Math.round(l.cx * T + 8 - cx - textWidth(s) / 2), dy = (l.cy + 1) * T - cy - (l.look === 'gateway' ? 60 : l.look === 'saul' ? 62 : 46);
       drawText(ctx, s, clamp(dx, 2, W - textWidth(s) - 2), dy, st === 'locked' || st === 'sealed' ? '#c98b3f' : '#ffe9a0', 1);
     }

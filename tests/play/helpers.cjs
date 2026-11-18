@@ -58,6 +58,35 @@ function installBot() {
         if (wallBehind < 14 && move === away) { move = adx < 60 ? toward : null; if (adx < 60) jump = true; }
         if (move) keys.push(move);
         if (jump && p.onGround && !g().input.held.jump) keys.push('jump'); else if (!p.onGround && p.vy < 0) keys.push('jump');
+        // With the buckler: when a missile is close and coming, lower the sling and face it, so it is turned back.
+        if (g().has('shield')) {
+          const inc = g().shots.find((sh) => sh.kind !== 'wave' && !sh.turned && sh.stuck <= 0 && Math.abs(sh.x - p.cx) < 90 && Math.abs(sh.y - p.cy) < 70 && Math.sign(sh.vx) === Math.sign(p.cx - sh.x));
+          if (inc) { const want = -Math.sign(inc.vx); ift.step(1, p.face !== want ? [want > 0 ? 'right' : 'left'] : []); log.frames++; continue; }
+        }
+        // Akhtal: the sword is his weakness. Close in whenever a stroke would stagger him or he is already
+        // winded; stop just short of his body; otherwise keep the usual distance.
+        if (opts.sword && adx < 140 && (b.state === 'stagger' || (b.state === 'recover' && b.t > 0.35) || (b.stunCool <= 0.15 && (b.state === 'idle' || b.state === 'tele')))) {
+          const k9 = adx > 30 ? [toward] : adx < 22 ? [away] : [];
+          if (p.face !== dir) k9.push(toward);
+          if (adx <= 36 && p.swordCool <= 0 && p.face === dir) k9.push('melee');
+          if (!p.onGround && p.vy < 0) k9.push('jump');
+          ift.step(1, k9); log.frames++; continue;
+        }
+        // Yishvar: fight from the cistern, where his thrusts and charges cannot follow. Float at the surface and sling.
+        if (opts.pool) {
+          const room = g().room, px0 = opts.pool[0] * 16, px1 = (opts.pool[1] + 1) * 16, mid = (px0 + px1) / 2;
+          if (Math.abs(p.cx - mid) > 20) { const k7 = [p.cx < mid ? 'right' : 'left']; if (p.onGround && !p.inWater && Math.abs(p.cx - mid) > 60 && !g().input.held.jump && jump) k7.push('jump'); ift.step(1, k7); log.frames++; continue; }
+          const k8 = room.tileAt(p.cx, p.cy - 10) === 9 ? ['up'] : [];
+          if (p.face !== dir && !p.charging) { ift.step(1, [toward]); log.frames++; continue; }
+          if (p.charge < 1) { ift.step(1, [...k8, 'fire']); log.frames++; continue; }
+          let want = null;
+          for (let ang = 0.1; ang <= 1.2 && want === null; ang += 0.05) if (bot.wouldHit(ang, b)) want = ang;
+          for (let ang = 0.05; ang >= -0.6 && want === null; ang -= 0.05) if (bot.wouldHit(ang, b)) want = ang;
+          if (want === null || p.face !== dir) { ift.step(1, p.face !== dir ? [] : ['fire']); log.frames++; }
+          else if (Math.abs(p.aim - want) > 0.04) { ift.step(1, ['fire', p.aim < want ? 'up' : 'down']); log.frames++; }
+          else { ift.step(1, []); log.frames++; }
+          continue;
+        }
         // Maroz: fight from the arena wall, out of the lions' reach. Cling four to five tiles up, sling outward.
         if (opts.wall) {
           const left = p.cx < roomW / 2, wdir = left ? -1 : 1, wkey = left ? 'left' : 'right', wallX = left ? 32 : roomW - 32 - p.w;
@@ -68,7 +97,10 @@ function installBot() {
             if (!p.onGround && p.vy >= -20 && p.jumps > 0 && !g().input.held.jump) k5.push('jump');
             ift.step(1, k5); log.frames++; continue;
           }
-          if (up < 78 && p.charge === 0) { ift.step(1, [wkey, 'up']); log.frames++; continue; }
+          if (up < 124 && p.charge === 0) { ift.step(1, [wkey, 'up']); log.frames++; continue; }
+          // A javelin coming at the wall: let go of the sling and climb out of its line.
+          const inc2 = g().shots.find((sh) => sh.kind !== 'wave' && sh.stuck <= 0 && Math.abs(sh.x - p.cx) < 100 && Math.abs(sh.y - p.cy) < 40);
+          if (inc2) { ift.step(1, [wkey, inc2.y > p.cy || up > 170 ? (up < 190 ? 'up' : 'down') : 'down']); log.frames++; continue; }
           if (p.charge < 1) { ift.step(1, ['fire']); log.frames++; continue; }
           // At full charge: find an angle that would strike him, turn the aim to it with up/down, loose.
           let want = null;

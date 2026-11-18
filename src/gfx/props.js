@@ -2,6 +2,7 @@
 import { T, hash2 } from '../core.js';
 import { REED, CRACK, THORN, HEDGE, BOUND, WATER, RING } from '../world/room.js';
 import { drawText, textWidth } from '../font.js';
+import { drawDecor } from './decor.js';
 
 const px = (g, c, x, y, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
 
@@ -103,6 +104,7 @@ export function drawProp(g, p, x, y, t) {
       px(g, '#3a2a20', x - 6, y - 2, 12, 2); px(g, '#5a3f2a', x - 5, y - 3, 4, 1); px(g, '#5a3f2a', x + 1, y - 3, 4, 1);
       px(g, '#6f6a7c', x - 8, y - 1, 2, 1); px(g, '#6f6a7c', x + 6, y - 1, 2, 1);
       break;
+    default: drawDecor(g, p.type, x, y, p.v || 0, t);
   }
 }
 

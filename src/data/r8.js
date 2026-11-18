@@ -10,7 +10,7 @@ export const region8 = {
       seg(34, 32, { perch: [16], M: [6], A: [26], t: [29] }),
       seg(22, 28, { M: [5], H: [12], t: [9] }),
       seg(30, 32, { sunk: [4], M: [20], A: [26], t: [23] }),
-      seg(24, 32, { hut: [8, '9'], t: [22] }),
+      seg(24, 32, { hut: [8, '9'], t: [20] }),
     ], { R: ['east', 'quay/west'] }),
     room('quay', 'The Long Quay', 44, [
       seg(22, 32, { t: [6], s: [10], M: [17] }),
@@ -23,6 +23,6 @@ export const region8 = {
       seg(24, 32, { t: [6], A: [10], M: [18] }),
       seg(20, 32, { door: ['arena', 10, 'arena/in', { look: 'arena', label: "BANITH'S GROUND" }], t: [6, 14] }),
     ], { L: ['west', 'quay/east'] }),
-    arena(8, "Banith's Ground", 'mole/arena', { w: 40, planks: [], rings: [[10, 6], [20, 7], [30, 6]] }),
+    arena(8, "Banith's Ground", 'mole/arena', { w: 40, planks: [], rings: [[10, 6], [20, 6], [30, 6]] }),
   ],
 };

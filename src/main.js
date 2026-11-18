@@ -18,7 +18,7 @@ addEventListener('resize', fit); fit();
 let storage = null;
 try { storage = params.has('nosave') ? null : window.localStorage; } catch (e) { storage = null; }
 // ?at=region/room starts a fresh save in that room (used by the scripted playthroughs).
-const game = new Game(canvas, { storage, ui, at: params.get('at') });
+const game = new Game(canvas, { storage, ui, at: params.get('at'), title: params.has('title') || (!test && !params.has('at')) });
 mountDebug(game, ui);
 
 let realtime = !test, acc = 0, last = performance.now(), fps = 60;

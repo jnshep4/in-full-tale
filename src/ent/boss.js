@@ -1,7 +1,7 @@
 // Philistine captains. One class, driven by a per-captain config (src/data/bosses.js): which
 // attacks he knows, how fast he is, and which of David's powers he is weak to.
 import { T, approach, overlap, clamp } from '../core.js';
-import { moveBody } from '../world/room.js';
+import { moveBody, WATER } from '../world/room.js';
 import { drawCaptain, drawCaptainLight, drawGoliath } from '../gfx/chars.js';
 
 // A hostile missile or ground wave. kind: 'javelin' | 'arrow' | 'wave' | 'rock'
@@ -25,7 +25,7 @@ export class Shot {
       this.stuck = 0.6; g.sfx.play('stoneHit'); return;
     }
     if (this.turned) {                                   // turned back by the buckler: now it is David's
-      if (this.owner && !this.owner.gone && overlap(this.box(), this.owner)) { this.owner.hit(g, 4, Math.sign(this.vx) || 1, { tag: 'reflect', charge: 1 }); this.dead = true; }
+      if (this.owner && !this.owner.gone && overlap(this.box(), this.owner)) { this.owner.hit(g, 3, Math.sign(this.vx) || 1, { tag: 'reflect', charge: 1 }); this.dead = true; }
       for (const s of g.soldiers) if (s.state !== 'dying' && overlap(this.box(), s)) { s.hit(g, 3, Math.sign(this.vx) || 1, 1); this.dead = true; break; }
       return;
     }
@@ -62,11 +62,18 @@ export class Boss {
     this.state = 'intro'; this.t = 1.4; this.attack = null; this.cool = 1; this.n = 0; this.last = null;
     this.flash = 0; this.walk = 0; this.moving = false; this.onGround = true; this.gone = false; this.struck = false; this.weakT = 0;
     this.roared = false; this.marked = false; this.stunCool = 0;
+    this.drop = 1;                  // captains are too heavy for planks: they fall through them
   }
   get cx() { return this.x + this.w / 2; }
   get cy() { return this.y + this.h / 2; }
   get phase() { return this.hp <= this.maxHp / 2 ? 2 : 1; }
   speed() { return (this.cfg.speed || 1) * (this.phase === 2 ? 1.25 : 1); }
+
+  // Is there ground to walk on just ahead? Captains do not wade into cisterns or step off ledges.
+  floorAhead(room, dir) {
+    const fx = dir > 0 ? this.x + this.w + 4 : this.x - 4;
+    return room.solid(Math.floor(fx / T), Math.floor((this.y + this.h + 3) / T)) && room.tileAt(fx, this.y + this.h - 3) !== WATER;
+  }
 
   choose(g, adx) {
     const ok = (a) => (!a.phase || a.phase <= this.phase) && !(a.id === 'summon' && g.soldiers.filter((s) => s.summoned && s.state !== 'dying').length >= (a.limit || 2));
@@ -86,6 +93,7 @@ export class Boss {
     if (this.flash > 0) this.flash -= dt;
     if (this.weakT > 0) this.weakT -= dt;
     if (this.stunCool > 0) this.stunCool -= dt;
+    if (this.shakeCool > 0) this.shakeCool -= dt;
     if (this.state === 'dying') {
       this.t += dt; this.vx = 0;
       for (let i = 0; i < 2; i++) g.parts.push({ x: this.cx + (g.rand() - 0.5) * 18, y: this.y + g.rand() * this.h, vx: (g.rand() - 0.5) * 30, vy: -30 - g.rand() * 70, g: -40, life: 0.9, max: 0.9, col: g.rand() < 0.3 ? '#ffffff' : '#ffe9b8', size: g.rand() < 0.3 ? 2 : 1, glow: true });
@@ -123,6 +131,10 @@ export class Boss {
         if (this.t <= 0) { this.state = 'idle'; this.cool = 0.35; }
         break;
     }
+    if (this.onGround && this.vx !== 0 && !this.floorAhead(room, Math.sign(this.vx))) {
+      if (this.state === 'act' && A && A.id === 'charge') { this.state = 'recover'; this.t = 0.9; this.weakT = 0.9; }
+      this.vx = 0;
+    }
     this.vy = Math.min(this.vy + 1200 * dt, 460);
     const vy0 = this.vy;
     moveBody(room, this, dt, g.res);
@@ -131,7 +143,7 @@ export class Boss {
     if (g.res.hy) this.vy = 0;
     const landed = g.res.hy === 1 && !this.onGround && vy0 > 200;
     this.onGround = g.res.hy === 1;
-    if (this.state === 'act' && A.id === 'leap' && landed) this.land(g);
+    if (this.state === 'act' && A.id === 'leap' && (landed || (this.onGround && this.t < 2.8))) this.land(g);
     if (this.state === 'act' && A.id === 'charge' && hitWall) { g.shake = 7; g.sfx.play('slam'); this.state = 'recover'; this.t = 1.3; this.weakT = 1.3; g.puff(this.cx + this.face * 8, this.cy, 10, '#b9a685', 120); }
     this.moving = Math.abs(this.vx) > 8 && this.onGround && this.state === 'idle';
     if (this.moving) this.walk += dt * 9 * sp;
@@ -147,8 +159,9 @@ export class Boss {
       case 'sweep': this.t = 0.3; this.vx = this.face * 90; g.sfx.play('swing'); break;
       case 'charge': this.t = 2.2; this.vx = this.face * (A.v || 250) * sp; g.sfx.play('roar'); break;
       case 'leap': {
-        this.t = 3; const reach = clamp(dx, -190, 190);
-        const jv = Math.max(A.vy || 400, Math.min(560, Math.sqrt(2400 * Math.max(0, this.y + this.h - p.y - this.h + 24))));     // high enough to reach him
+        this.t = 3; let reach = clamp(dx, -190, 190);
+        while (Math.abs(reach) > 16 && !g.room.solid(Math.floor((this.cx + reach) / T), Math.floor((this.y + this.h + 3) / T))) reach -= Math.sign(reach) * 16;   // never into the water
+        const jv = Math.max(A.vy || 400, Math.min(450, Math.sqrt(2400 * Math.max(0, this.y + this.h - p.y - this.h + 24))));     // high enough to reach him
         this.vy = -jv; this.vx = reach / (2 * jv / 1200); this.onGround = false; g.sfx.play('jump'); break;
       }
       case 'volley': this.t = 0.2; this.n = A.n || 3; break;
@@ -213,6 +226,9 @@ export class Boss {
     g.puff(this.cx, this.y + this.h, 14, '#b9a685', 130);
     for (const d of [-1, 1]) g.shots.push(new Shot('wave', this.cx + d * 10, this.y + this.h, d * 150, 0, { life: 0.75, owner: this }));
     this.state = 'recover'; this.t = this.attack.rest ?? 0.9; this.weakT = this.t;
+    // The ground jumps: anyone clinging to a wall nearby loses his hold.
+    const p = g.player;
+    if (p.cling && Math.abs(p.cx - this.cx) < 150 && !(this.shakeCool > 0)) { this.shakeCool = 7; p.cling = 0; p.wallT = 0.45; p.charging = false; p.charge = 0; g.banner2('THE WALL SHAKES HIM LOOSE', 1.2); }
   }
 
   // info: { charge, tag } — tag names the power behind the blow ('full', 'dash', 'air2', 'wall', 'sword', ...)
@@ -248,7 +264,7 @@ export class Boss {
     if (weak) g.banner2('A TELLING BLOW', 0.9);
     if (this.hp <= 0) { this.hp = 0; this.state = 'dying'; this.t = 0; this.vx = 0; g.sfx.play('bossfall'); g.hitstop = 0.25; g.shake = 10; g.onBossDying(this); return true; }
     // A telling blow staggers him, but not again until he has found his feet.
-    if (weak && this.stunCool <= 0 && (this.state === 'idle' || this.state === 'tele' || this.state === 'recover')) { this.state = 'stagger'; this.t = 0.7; this.vx = dir * 60; this.stunCool = 4; }
+    if (weak && this.stunCool <= 0 && (this.state === 'idle' || this.state === 'tele' || this.state === 'recover')) { this.state = 'stagger'; this.t = 0.7; this.vx = dir * 60; this.stunCool = this.cfg.stun || 4; }
     return true;
   }
 

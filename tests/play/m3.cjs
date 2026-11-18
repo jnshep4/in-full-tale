@@ -100,7 +100,7 @@ const ORDER = ['dash', 'double', 'climb', 'pound', 'sword', 'shield', 'grapple',
   }
 
   if (!only || only === 'bosses') {
-    for (const n of [2, 3, 4, 5]) {
+    for (const n of [2, 3, 4, 5].filter((k) => !process.argv[3] || +process.argv[3] === k)) {
       const info = await ev(async (n) => { const b = await import('/src/data/bosses.js'), v = await import('/src/data/verses.js'), p = await import('/src/data/powers.js'); return { name: b.BOSSES[n].name, verse: v.REGION_VERSES.find((x) => x.region === n), tag: v.VERSION_TAG, power: p.POWERS[n - 1], sword: v.SWORD_VERSE }; }, n);
       console.log(`${info.name} (region ${n})`);
       await setup(n - 1, n, 'arena', 'in');
@@ -108,9 +108,11 @@ const ORDER = ['dash', 'double', 'climb', 'pound', 'sword', 'shield', 'grapple',
       t.ok(s.boss && s.boss.name === info.name && s.maxHp === 5 + n - 1, `${info.name} stands in his ground; David has ${5 + n - 1} health`, [s.boss, s.maxHp]);
       await step(70); await h.shot(`m3-boss${n}-intro`);
       let fight = null, attempts = 0, assisted = false;
-      for (; attempts < 5; attempts++) {
+      for (; attempts < 7; attempts++) {
+        // Each attempt runs on its own fixed random seed, so the fights are the same from run to run.
+        await ev(([n, k]) => { let sd = (n * 1000 + k * 7919 + 12345) >>> 0; __ift.game.rand = () => { sd = (sd + 0x6D2B79F5) | 0; let x = Math.imul(sd ^ (sd >>> 15), 1 | sd); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }, [n, attempts]);
         if (attempts === 0) { await ev((n) => bot.fightBoss(300, { pound: n === 5, wall: n === 4 }), n); await h.shot(`m3-boss${n}-fight-1`); await ev((n) => bot.fightBoss(300, { pound: n === 5, wall: n === 4 }), n); await h.shot(`m3-boss${n}-fight-2`); }
-        if (attempts === 4) { assisted = true; await ev(() => { __ift.game.godmode = true; }); }
+        if (attempts === 6) { assisted = true; await ev(() => { __ift.game.godmode = true; }); }
         fight = await ev((n) => bot.fightBoss(9000, { pound: n === 5, wall: n === 4 }), n);
         if (fight.won) break;
         console.log('  (David fell; trying again) ' + JSON.stringify(fight));
@@ -139,6 +141,7 @@ const ORDER = ['dash', 'double', 'climb', 'pound', 'sword', 'shield', 'grapple',
       await step(40); await step(1, ['confirm']); s = await step(5);
       t.ok(s.card === null && s.flags['boss' + n] === 1 && s.maxHp === 5 + n, 'the victory is saved and a health pip added', [s.flags, s.maxHp]);
     }
+    if (!process.argv[3]) {
     console.log('weakness chain');
     const weak = await ev(async () => {
       const g = __ift.game, out = {};
@@ -159,6 +162,7 @@ const ORDER = ['dash', 'double', 'climb', 'pound', 'sword', 'shield', 'grapple',
     });
     t.ok(['Shalmek', 'Ittur', 'Pashdu', 'Maroz'].every((k) => weak[k][0] === 3 && weak[k][1] === 6), 'captains 1-4 each take double from the earlier power they are weak to', weak);
     t.ok(weak.Goliath.body === 0 && weak.Goliath.brow === 3 && weak.Goliath.afterPound === 'stagger' && weak.Goliath.kneeling === 6, "Goliath: bronze turns a body shot, the brow is wounded, Lion's Fall drops him to a knee and doubles the next stone", weak.Goliath);
+    }
   }
 
   if (!only || only === 'story') {

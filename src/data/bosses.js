@@ -44,7 +44,6 @@ Object.assign(BOSSES, {
       { id: 'charge', w: 3, min: 80, tele: 0.55, v: 260 },
       { id: 'sweep', w: 3, max: 70, tele: 0.4, rest: 0.7 },
       { id: 'leap', w: 2, min: 60, tele: 0.4, rest: 0.9 },
-      { id: 'volley', w: 2, min: 100, phase: 2, n: 2, tele: 0.5, rest: 0.7 },
     ],
   },
   5: {
@@ -61,17 +60,17 @@ Object.assign(BOSSES, {
 
 Object.assign(BOSSES, {
   6: {
-    name: 'Akhtal', title: 'Captain of Ekron', hp: 120, weak: 'sword', weakHint: "GOLIATH'S SWORD CUTS THROUGH HIS GUARD", guard: 2, gap: 0.85, keep: 60, speed: 1.05,
+    name: 'Akhtal', title: 'Captain of Ekron', hp: 130, weak: 'sword', weakHint: "GOLIATH'S SWORD CUTS THROUGH HIS GUARD", guard: 2, stun: 3, gap: 0.85, keep: 60, speed: 1.05,
     look: { bronze: '#8a8f6a', bronzeD: '#5a5f42', bronzeH: '#d8e0a8', plume: ['#3a602e', '#a8d070'], cape: '#2a3a22', kilt: '#c8c0a0', kiltD: '#948c70', band: '#3a602e', beard: '#3a2a22', weapon: 'axe', shield: true },
     attacks: [
       { id: 'sweep', w: 3, max: 80, tele: 0.42, rest: 0.75 },
-      { id: 'charge', w: 2, min: 80, tele: 0.55, v: 270 },
-      { id: 'leap', w: 2, min: 50, tele: 0.4, rest: 0.9 },
+      { id: 'charge', w: 2, min: 80, tele: 0.6, v: 250 },
+      { id: 'leap', w: 2, min: 50, tele: 0.45, rest: 1.0 },
       { id: 'summon', w: 1, phase: 2, n: 1, kind: 'heavy', tele: 0.7, rest: 0.6, limit: 1 },
     ],
   },
   7: {
-    name: 'Zeruk', title: 'Captain of the Temple Guard', hp: 110, weak: 'reflect', weakHint: 'HIS OWN MISSILES, TURNED BY THE BUCKLER, UNDO HIM', guard: 2, gap: 0.75, keep: 170, speed: 1.05,
+    name: 'Zeruk', title: 'Captain of the Temple Guard', hp: 150, weak: 'reflect', weakHint: 'HIS OWN MISSILES, TURNED BY THE BUCKLER, UNDO HIM', guard: 2, gap: 0.75, keep: 170, speed: 1.05,
     look: { bronze: '#c8a848', bronzeD: '#8a702a', bronzeH: '#fff0a0', plume: ['#6a2a8a', '#d090f0'], cape: '#4a1c6a', kilt: '#e0d8f0', kiltD: '#a8a0b8', band: '#6a2a8a', beard: '#d8d0c0', weapon: 'mace', shield: false },
     attacks: [
       { id: 'volley', w: 4, min: 60, n: 4, tele: 0.5, rest: 0.9, every: 0.3 },
@@ -81,7 +80,7 @@ Object.assign(BOSSES, {
     ],
   },
   8: {
-    name: 'Banith', title: 'Master of the Harbor', hp: 130, weak: 'hang', weakHint: 'STONES LOOSED FROM THE CORD STRIKE TRUE', guard: 1, gap: 0.8, keep: 70, speed: 1.1,
+    name: 'Banith', title: 'Master of the Harbor', hp: 150, weak: 'hang', weakHint: 'STONES LOOSED FROM THE CORD STRIKE TRUE', guard: 1, gap: 0.8, keep: 70, speed: 1.1,
     look: { bronze: '#6aa8a0', bronzeD: '#3e706c', bronzeH: '#c8fff0', plume: ['#e8e0c8', '#ffffff'], cape: '#1c4458', kilt: '#d0e0e0', kiltD: '#98a8a8', band: '#1c4458', beard: '#2a2a2a', weapon: 'spear', shield: true },
     attacks: [
       { id: 'stomp', w: 3, tele: 0.5, rest: 0.8 },
@@ -102,7 +101,7 @@ Object.assign(BOSSES, {
     ],
   },
   10: {
-    name: 'Seren Orphaz', title: 'Lord of Gath', hp: 180, weak: 'heavy', weakHint: 'THE SMOOTH STONE BREAKS HIS GUARD', guard: 2, gap: 0.7, keep: 70, speed: 1.15, w: 18, h: 36,
+    name: 'Seren Orphaz', title: 'Lord of Gath', hp: 300, weak: 'heavy', weakHint: 'THE SMOOTH STONE BREAKS HIS GUARD', guard: 2, gap: 0.5, keep: 70, speed: 1.2, w: 18, h: 36,
     look: { bronze: '#3a3440', bronzeD: '#221e28', bronzeH: '#ffd680', plume: ['#d8362e', '#ffb060'], cape: '#7a1f2a', kilt: '#2a2630', kiltD: '#18161c', band: '#ffd680', beard: '#c8c8c8', weapon: 'sword', shield: true },
     attacks: [
       { id: 'sweep', w: 3, max: 80, tele: 0.4, rest: 0.7 },

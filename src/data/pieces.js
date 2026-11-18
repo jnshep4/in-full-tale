@@ -92,7 +92,8 @@ export function arena(n, name, from, o = {}) {
   if (o.pool) b.fill(o.pool[0], 14, o.pool[1], 14 + Math.min(2, o.pool[2]) - 1, '~');
   b.door('in', 4, 13, from, { look: 'path' });
   b.door('out', w - 5, 13, `0/camp/d${n}`, { look: 'path', after: n, label: "TO SAUL'S CAMP" });
-  b.puts('t', [2, 13], [w >> 1, 13], [w - 3, 13]);
+  b.puts('t', [2, 13], [w - 3, 13]);
+  if (!o.pool) b.put(w >> 1, 13, 't'); else b.puts('t', [o.pool[0] - 2, 13], [o.pool[1] + 2, 13]);
   b.put(w - 10, 13, 'B');
   return b.done();
 }

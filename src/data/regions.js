@@ -5,7 +5,15 @@ import { region2 } from './r2.js';
 import { region3 } from './r3.js';
 import { region4 } from './r4.js';
 import { region5 } from './r5.js';
+import { region6 } from './r6.js';
+import { region7 } from './r7.js';
+import { region8 } from './r8.js';
+import { region9 } from './r9.js';
+import { region10 } from './r10.js';
 export const REGIONS_PLANNED = 10;
 export const MARKED_PER_REGION = 20;
-export const REGIONS = [hub, region1, region2, region3, region4, region5];
+import { decorate } from '../gfx/decor.js';
+export const REGIONS = [hub, region1, region2, region3, region4, region5, region6, region7, region8, region9, region10];
+// Scenery is scattered over every room once, here, so the game and the tests see the same data.
+for (const r of REGIONS) if (r.id > 0) for (const d of r.rooms) decorate(d, r.theme, r.id);
 export const regionById = (id) => REGIONS.find((r) => r.id === id);

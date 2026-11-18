@@ -1,6 +1,69 @@
 // All sound is synthesised with the Web Audio API. No samples, no downloads.
 export class Sfx {
-  constructor() { this.ctx = null; this.volume = 0.6; this.muted = false; this.combo = 0; this.comboT = 0; }
+  constructor() {
+    this.ctx = null; this.volume = 0.6; this.muted = false; this.combo = 0; this.comboT = 0;
+    this.musicVol = 0.5; this.mode = null; this.key = 0; this.nextT = 0; this.stepN = 0; this.seq = null;
+  }
+  setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = v; }
+  setMusicVolume(v) { this.musicVol = v; if (this.musicGain) this.musicGain.gain.value = v * 0.5; }
+
+  // ---- Music. Generated, not recorded: a plucked lyre line over a drone in a seven-note mode with
+  // a raised third (D, E flat, F sharp, G, A, B flat, C), a frame drum under the captains.
+  // mode: 'camp' | 'field' | 'boss' | null. key: the region id, which shifts the root and the tune.
+  setMusic(mode, key = 0) {
+    if (mode === this.mode && key === this.key) return;
+    this.mode = mode; this.key = key; this.stepN = 0; this.seq = null;
+    if (this.ctx) this.nextT = this.ctx.currentTime + 0.15;
+  }
+  buildSeq() {
+    // A deterministic 32-step line per (mode, key): steps along the scale, with rests.
+    let s = (this.key * 7919 + (this.mode === 'boss' ? 17 : this.mode === 'camp' ? 5 : 11)) >>> 0;
+    const r = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+    const seq = []; let deg = 0;
+    for (let i = 0; i < 32; i++) {
+      const strong = i % 4 === 0, rest = !strong && r() < (this.mode === 'boss' ? 0.25 : 0.45);
+      deg += Math.round((r() - 0.5) * (strong ? 5 : 3)); deg = Math.max(-3, Math.min(8, deg));
+      if (i % 16 === 0) deg = 0; if (i % 16 === 14) deg = 1;
+      seq.push(rest ? null : deg);
+    }
+    return seq;
+  }
+  music() {
+    const c = this.ctx; if (!c || !this.mode || this.musicVol <= 0) return;
+    if (!this.seq) this.seq = this.buildSeq();
+    const SCALE = [0, 1, 4, 5, 7, 8, 10], ROOTS = [0, 0, 2, -2, 3, -3, 5, 0, 2, -2, -4];
+    const root = 146.83 * Math.pow(2, (ROOTS[this.key] || 0) / 12);
+    const stepLen = this.mode === 'boss' ? 0.2 : this.mode === 'camp' ? 0.42 : 0.3;
+    const freq = (deg) => root * Math.pow(2, Math.floor(deg / 7) + SCALE[((deg % 7) + 7) % 7] / 12);
+    if (this.nextT < c.currentTime) this.nextT = c.currentTime + 0.05;
+    while (this.nextT < c.currentTime + 0.25) {
+      const i = this.stepN % 32, t0 = this.nextT, deg = this.seq[i];
+      if (deg !== null) this.pluck(freq(deg) * 2, t0, this.mode === 'boss' ? 0.3 : 0.7, i % 4 === 0 ? 0.11 : 0.075);
+      if (i % 8 === 0) this.pluck(freq(i % 16 === 8 ? 4 : 0) / 2, t0, 1.6, 0.1);                  // bass string
+      if (i % 16 === 0) this.drone(root / 2, t0, stepLen * 16);
+      if (this.mode === 'boss') { if (i % 4 === 0) this.drum(t0, 0.5); else if (i % 4 === 2 || i % 8 === 7) this.drum(t0, 0.22); }
+      else if (this.mode === 'field' && i % 8 === 4) this.drum(t0, 0.12);
+      this.nextT += stepLen; this.stepN++;
+    }
+  }
+  pluck(f, t0, len, v) {
+    const c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain();
+    o.type = 'triangle'; o.frequency.value = f; o2.type = 'sine'; o2.frequency.value = f * 2.005;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    o.connect(g); o2.connect(g); g.connect(this.musicGain); o.start(t0); o2.start(t0); o.stop(t0 + len + 0.05); o2.stop(t0 + len + 0.05);
+  }
+  drone(f, t0, len) {
+    const c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = f; o2.type = 'triangle'; o2.frequency.value = f * 1.5;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.06, t0 + len * 0.3); g.gain.linearRampToValueAtTime(0.0001, t0 + len + 0.2);
+    o.connect(g); o2.connect(g); g.connect(this.musicGain); o.start(t0); o2.start(t0); o.stop(t0 + len + 0.3); o2.stop(t0 + len + 0.3);
+  }
+  drum(t0, v) {
+    const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = this.noiseBuf; fl.type = 'lowpass'; fl.frequency.setValueAtTime(380, t0); fl.frequency.exponentialRampToValueAtTime(70, t0 + 0.16);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2);
+    s.connect(fl); fl.connect(g); g.connect(this.musicGain); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.25);
+  }
 
   // Browsers require a user gesture before audio can start.
   unlock() {
@@ -14,6 +77,7 @@ export class Sfx {
         this.master.gain.value = this.volume;
         const comp = this.ctx.createDynamicsCompressor();
         this.master.connect(comp); comp.connect(this.ctx.destination);
+        this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = this.musicVol * 0.5; this.musicGain.connect(this.master);
         const n = this.ctx.sampleRate;
         this.noiseBuf = this.ctx.createBuffer(1, n, n);
         const d = this.noiseBuf.getChannelData(0);
@@ -50,7 +114,7 @@ export class Sfx {
     s.start(t0, Math.random() * 0.5); s.stop(t0 + t + 0.02);
   }
 
-  tick(dt) { if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; } }
+  tick(dt) { if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; } this.music(); }
 
   play(name, p = 0) {
     if (!this.ctx || this.muted) return;

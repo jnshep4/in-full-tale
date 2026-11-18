@@ -12,12 +12,12 @@ export class UI {
   // spec: { kind, html, buttons: [{ label, value }], onClose(value), data: {} }
   show(spec) { if (this.cur) { this.queue.push(spec); return; } this.mount(spec); }
   mount(spec) {
-    this.cur = spec; this.t = 0; this.sel = 0;
+    this.cur = spec; this.t = spec.quick ? 0.4 : 0; this.sel = spec.sel || 0;
     const el = document.createElement('div');
     el.className = 'card ' + spec.kind; el.id = 'card'; el.dataset.kind = spec.kind;
     for (const k in spec.data || {}) el.dataset[k] = spec.data[k];
     const buttons = spec.buttons || [{ label: 'Continue', value: 'ok' }];
-    el.innerHTML = `<div class="card-in">${spec.html}<div class="card-buttons">${buttons.map((b, i) => `<button data-i="${i}" data-value="${esc(b.value)}">${esc(b.label)}</button>`).join('')}</div><p class="card-hint">${buttons.length > 1 ? 'Left / Right to choose, Enter to confirm' : 'Press Enter'}</p></div>`;
+    el.innerHTML = `<div class="card-in">${spec.html}<div class="card-buttons">${buttons.map((b, i) => `<button data-i="${i}" data-value="${esc(b.value)}">${esc(b.label)}</button>`).join('')}</div><p class="card-hint">${buttons.length > 1 ? 'Left / Right to choose, Enter to confirm' : 'Press Enter'}</p>${spec.foot || ''}</div>`;
     el.querySelectorAll('button').forEach((b) => { b.onclick = () => this.close(buttons[+b.dataset.i].value); });
     this.root.appendChild(el); this.el = el; this.paint();
     this.game.sfx.play(spec.sound || 'card');
@@ -37,6 +37,7 @@ export class UI {
       if (input.pressed.left) { this.sel = (this.sel + n - 1) % n; this.paint(); this.game.sfx.play('select'); }
       if (input.pressed.right) { this.sel = (this.sel + 1) % n; this.paint(); this.game.sfx.play('select'); }
     }
+    if (this.cur.esc && input.pressed.pause && this.t > 0.2) { this.close(this.cur.esc); return; }
     if (this.t > 0.5 && (input.pressed.confirm || input.pressed.jump || (n === 1 && input.pressed.fire))) {
       const b = (this.cur.buttons || [{ value: 'ok' }])[this.sel]; this.close(b.value);
     }

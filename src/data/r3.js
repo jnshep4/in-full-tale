@@ -14,11 +14,11 @@ export const region3 = {
       seg(20, 32, { M: [5], A: [12], t: [9] }),
     ], { R: ['east', 'caves/west'] }),
     room('caves', 'The Caves of Sorek', 44, [
-      seg(24, 32, { t: [6], s: [10], M: [18] }),
-      seg(20, 31, { pit: [6, 3], M: [12], t: [15] }),
-      seg(26, 32, { perch: [12], M: [20], t: [22] }),
-      seg(22, 32, { cellar: [4], A: [16] }),
-      seg(24, 32, { M: [6], s: [12], H: [18], t: [9] }),
+      seg(24, 32, { t: [6, 14, 22], s: [10], M: [18] }),
+      seg(20, 31, { pit: [6, 3], M: [12], t: [3, 15] }),
+      seg(26, 32, { perch: [12], M: [20], t: [3, 22] }),
+      seg(22, 32, { cellar: [4], A: [16], t: [13, 19] }),
+      seg(24, 32, { M: [6], s: [12], H: [18], t: [3, 9, 15, 21] }),
     ], { L: ['west', 'descent/east'], R: ['east', 'falls/west'], roof: 6 }),
     room('falls', 'The Narrows', 44, [
       seg(20, 32, { t: [6], s: [12] }),

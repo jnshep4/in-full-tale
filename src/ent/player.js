@@ -114,7 +114,7 @@ export class Player {
     // rising, so a jump up a low step is never interrupted.
     const wallAt = (dir, yy) => room.solid(Math.floor((dir > 0 ? this.x + this.w + 1 : this.x - 2) / T), Math.floor(yy / T));
     if (g.has('climb') && !this.onGround && !dashing && !this.pounding && !this.inWater && control) {
-      if (!this.cling && ax !== 0 && this.vy >= 0 && wallAt(ax, this.y + this.h - 3) && wallAt(ax, this.y + 6)) { this.cling = ax; this.face = ax; g.sfx.play('land'); }
+      if (!this.cling && this.wallT <= 0 && inp.x !== 0 && this.vy >= 0 && this.y > 4 && wallAt(inp.x, this.y + this.h - 3) && wallAt(inp.x, this.y + 6)) { this.cling = inp.x; this.face = inp.x; g.sfx.play('land'); }
     }
     if (this.cling) {
       const c = this.cling;
@@ -125,6 +125,7 @@ export class Player {
       } else {
         // While the sling is whirling, up and down aim it instead of climbing.
         this.vx = 0; this.vy = inp.held.fire ? 0 : inp.held.up ? -PHYS.climb : inp.held.down ? PHYS.climb * 1.4 : 0;
+        if (this.y < 4) this.vy = Math.max(this.vy, this.y < 0 ? 60 : 0);     // no climbing out over the top of the room
         this.airDash = true; this.jumps = g.has('double') ? 1 : 0; this.air2 = false;
       }
     }
