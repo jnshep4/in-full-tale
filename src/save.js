@@ -8,6 +8,7 @@ export function freshSave() {
     soldiers: {},      // marked soldier id -> [x, y] (fallen, trophy waiting there) or 'c' (trophy collected)
     powers: [],        // ids of powers earned
     flags: {},
+    seen: {},          // 'region/room' -> 1 for every room entered (the map shows only these)
     gates: {},         // 'region/room/x,y' -> 1 for every gate tile opened         // story flags (bosses beaten, scenes seen)
     at: { region: 0, room: null, link: null },
     played: 0,         // seconds

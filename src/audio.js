@@ -36,15 +36,36 @@ export class Sfx {
     const stepLen = this.mode === 'boss' ? 0.2 : this.mode === 'camp' ? 0.42 : 0.3;
     const freq = (deg) => root * Math.pow(2, Math.floor(deg / 7) + SCALE[((deg % 7) + 7) % 7] / 12);
     if (this.nextT < c.currentTime) this.nextT = c.currentTime + 0.05;
+    // Four bars of 16 steps. The bass walks a slow progression (first, fourth, second, first degree);
+    // the tune is the 32-step line played twice, the second time answered a third above by a second
+    // voice; a soft reed holds the chord. Regions take the lead on a lyre, a reed pipe or a flute.
+    const PROG = [0, 3, 1, 0], voice = ['lyre', 'lyre', 'lyre', 'pipe', 'flute', 'lyre', 'pipe', 'flute', 'lyre', 'pipe', 'flute'][this.key] || 'lyre';
     while (this.nextT < c.currentTime + 0.25) {
-      const i = this.stepN % 32, t0 = this.nextT, deg = this.seq[i];
-      if (deg !== null) this.pluck(freq(deg) * 2, t0, this.mode === 'boss' ? 0.3 : 0.7, i % 4 === 0 ? 0.11 : 0.075);
-      if (i % 8 === 0) this.pluck(freq(i % 16 === 8 ? 4 : 0) / 2, t0, 1.6, 0.1);                  // bass string
-      if (i % 16 === 0) this.drone(root / 2, t0, stepLen * 16);
-      if (this.mode === 'boss') { if (i % 4 === 0) this.drum(t0, 0.5); else if (i % 4 === 2 || i % 8 === 7) this.drum(t0, 0.22); }
-      else if (this.mode === 'field' && i % 8 === 4) this.drum(t0, 0.12);
+      const n = this.stepN % 64, i = n % 32, bar = Math.floor(n / 16), t0 = this.nextT, deg = this.seq[i], ch = PROG[bar];
+      const lead = (f, len, v) => (voice === 'lyre' || this.mode === 'boss' ? this.pluck(f, t0, len, v) : this.wind(f, t0, len * 0.9, v * 0.7, voice === 'pipe'));
+      if (deg !== null) lead(freq(deg) * 2, this.mode === 'boss' ? 0.3 : 0.7, i % 4 === 0 ? 0.11 : 0.075);
+      if (n >= 32 && deg !== null && i % 2 === 0) this.pluck(freq(deg + 2) * 2, t0, 0.5, 0.04);        // the answering voice
+      if (i % 8 === 0) this.pluck(freq(ch) / 2, t0, 1.6, 0.1);                                        // bass string
+      else if (i % 8 === 4 && this.mode !== 'camp') this.pluck(freq(ch + 4) / 2, t0, 0.8, 0.05);
+      if (n % 16 === 0) { this.drone(freq(ch) / 2, t0, stepLen * 16); if (this.mode !== 'boss') this.wind(freq(ch + 2), t0, stepLen * 15, 0.018, true); }
+      if (this.mode === 'boss') { if (i % 4 === 0) this.drum(t0, 0.5); else if (i % 4 === 2 || i % 8 === 7) this.drum(t0, 0.22); if (i % 16 === 12) this.rattle(t0); }
+      else if (this.mode === 'field') { if (i % 8 === 4) this.drum(t0, 0.12); if (i % 16 === 14) this.drum(t0, 0.07); if (i % 8 === 0) this.rattle(t0, 0.02); }
       this.nextT += stepLen; this.stepN++;
     }
+  }
+  // A sustained wind voice: a reed pipe (filtered saw) or a flute (sine with a slow tremble).
+  wind(f, t0, len, v, reed) {
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain(), fl = c.createBiquadFilter(), lfo = c.createOscillator(), lg = c.createGain();
+    o.type = reed ? 'sawtooth' : 'sine'; o.frequency.value = f; lfo.frequency.value = 5.2; lg.gain.value = f * 0.006; lfo.connect(lg); lg.connect(o.frequency);
+    fl.type = 'lowpass'; fl.frequency.value = reed ? f * 3 : f * 6; fl.Q.value = 1;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(v, t0 + Math.min(0.06, len * 0.3)); g.gain.setValueAtTime(v, t0 + len * 0.7); g.gain.linearRampToValueAtTime(0.0001, t0 + len);
+    o.connect(fl); fl.connect(g); g.connect(this.musicGain); o.start(t0); lfo.start(t0); o.stop(t0 + len + 0.05); lfo.stop(t0 + len + 0.05);
+  }
+  rattle(t0, v = 0.05) {
+    const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = this.noiseBuf; fl.type = 'highpass'; fl.frequency.value = 5000;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+    s.connect(fl); fl.connect(g); g.connect(this.musicGain); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.12);
   }
   pluck(f, t0, len, v) {
     const c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain();

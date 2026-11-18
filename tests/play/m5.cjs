@@ -33,7 +33,7 @@ const { launch, checker } = require('./helpers.cjs');
   t.ok(s.card === null, 'Esc again resumes');
 
   console.log('settings');
-  await step(1, ['pause']); await step(30); await step(1, ['right']); await step(2); await step(1, ['confirm']); await step(3); c = await card();
+  await step(1, ['pause']); await step(30); await step(1, ['right']); await step(2); await step(1, ['right']); await step(2); await step(1, ['confirm']); await step(3); c = await card();
   t.ok(c && c.kind === 'settings' && /Sound 60%/.test(c.text), 'the pause sheet leads to settings', c && c.text);
   await step(30); await step(1, ['confirm']); await step(3); c = await card();
   const saved = await ev(() => JSON.parse(localStorage.getItem('inFullTale.settings.v1')));
@@ -46,6 +46,21 @@ const { launch, checker } = require('./helpers.cjs');
   await step(30); await step(1, ['pause']); await step(3); c = await card();
   t.ok(c && c.kind === 'pause', 'Esc in settings goes back to the sheet', c && c.kind);
   await step(30); await step(1, ['pause']); await step(3);
+
+  console.log('map');
+  const map = await ev(() => {
+    const g = __ift.game; g.loadRoom(1, 'outskirts'); g.loadRoom(1, 'brook', 'west'); __ift.step(10, []);
+    __ift.step(1, ['pause']); __ift.step(30, []); __ift.step(1, ['right']); __ift.step(2, []); __ift.step(1, ['confirm']); __ift.step(3, []);
+    const el = document.querySelector('#card'), img = el.querySelector('img.map');
+    return { kind: el.dataset.kind, left: +el.dataset.left, title: el.querySelector('h2').textContent, img: !!img && img.src.startsWith('data:image/png'), seen: Object.keys(g.save.seen) };
+  });
+  t.ok(map.kind === 'map' && map.img && /Valley of Elah/.test(map.title), 'the pause sheet leads to a map of the region David is in', map);
+  t.ok(map.left === 17 && map.seen.includes('1/brook') && !map.seen.includes('1/picket'), 'it counts the 17 marked soldiers still to find there, and knows which rooms have been entered', map);
+  await h.shot('m5-map');
+  await step(30); await step(1, ['pause']); await step(3); c = await card();
+  t.ok(c && c.kind === 'pause', 'Esc on the map goes back to the sheet', c && c.kind);
+  await step(30); await step(1, ['pause']); await step(3);
+  await ev(() => __ift.game.loadRoom(0, 'camp')); await step(5);
 
   console.log('gateway label and music modes');
   const label = await ev(() => { const g = __ift.game; g.player.x = 36 * 16 + 3; __ift.step(2, []); return g.nearDoor && g.tracker()[0]; });

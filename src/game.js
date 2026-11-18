@@ -68,10 +68,51 @@ export class Game {
   pauseMenu() {
     const rows = this.tracker().map((r) => `<tr><td>${r.id}. ${r.name}</td><td>${r.got} / ${r.of}</td><td>${r.captain ? 'captain fallen' : ''}</td></tr>`).join('');
     const powers = '<div class="hows">' + POWERS.filter((q) => this.has(q.id)).map((q) => `<p class="how"><b>${q.name}.</b> ${q.how}</p>`).join('') + '</div>';
-    this.ui.show({ kind: 'pause', quick: true, sound: 'select', esc: 'resume', buttons: [{ label: 'Resume', value: 'resume' }, { label: 'Settings', value: 'set' }, { label: 'Title', value: 'title' }],
+    this.ui.show({ kind: 'pause', quick: true, sound: 'select', esc: 'resume', buttons: [{ label: 'Resume', value: 'resume' }, { label: 'Map', value: 'map' }, { label: 'Settings', value: 'set' }, { label: 'Title', value: 'title' }],
       html: `<h2>The Tally: ${this.save.tally} of ${TALLY_GOAL}</h2><table class="sheet">${rows}</table>${powers}`,
-      onClose: (v) => { if (v === 'set') this.settingsMenu(() => this.pauseMenu()); else if (v === 'title') this.title(); } });
+      onClose: (v) => { if (v === 'set') this.settingsMenu(() => this.pauseMenu()); else if (v === 'title') this.title(); else if (v === 'map') this.mapCard(this.region.id > 0 ? this.region.id : 1); } });
   }
+  // The map: one region at a time, its rooms side by side in the order they are walked. Rooms not
+  // yet entered are blank. Soldiers still carrying a ring show as red marks, gates in the colour of
+  // their power (dim until it is held), doors in green, David in white.
+  mapCard(rid) {
+    const region = regionById(rid), GATE = { 4: '#c9a75a', 5: '#8a7f96', 6: '#5f9a3a', 7: '#ffd680', 8: '#c98b3f', 9: '#3c78c8', 10: '#ffe890' };
+    const rooms = region.rooms.map((d) => parseRoom(d, rid)), gap = 6, W0 = rooms.reduce((a, r) => a + r.w + gap, gap);
+    // Leave out the empty sky above the highest thing in each room, and most of the rock under the lowest floor.
+    for (const r of rooms) {
+      r.top = r.h; r.bot = 0;
+      for (let y = 0; y < r.h; y++) for (let x = 3; x < r.w - 3; x++) { const t = r.tile(x, y); if (t && y < r.top) r.top = y; if (!t && y > r.bot) r.bot = y; }
+      r.top = Math.max(0, r.top - 4); r.bot = Math.min(r.h - 1, r.bot + 3);
+    }
+    const H0 = Math.max(...rooms.map((r) => r.bot - r.top + 1)) + 4;
+    const c = document.createElement('canvas'); c.width = W0 * 2; c.height = H0 * 2; const g = c.getContext('2d');
+    g.fillStyle = '#0e0a12'; g.fillRect(0, 0, c.width, c.height);
+    let ox = gap, left = 0;
+    for (const r of rooms) {
+      const seen = this.save.seen[rid + '/' + r.id], oy = H0 - 2 - (r.bot + 1), dot = (x, y, col, w = 1, h = 1) => { if (y < r.top || y > r.bot) return; g.fillStyle = col; g.fillRect((ox + x) * 2, (oy + y - h + 1) * 2, w * 2, h * 2); };
+      g.strokeStyle = '#3a2a20'; g.strokeRect(ox * 2 - 1, (oy + r.top) * 2 - 1, r.w * 2 + 2, (r.bot - r.top + 1) * 2 + 2);
+      if (seen) {
+        const pre = `${rid}/${r.id}/`;
+        for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) {
+          const t = this.save.gates[pre + x + ',' + y] ? 0 : r.tile(x, y);
+          if (t === 1) dot(x, y, '#4a3e59'); else if (t === 2) dot(x, y, '#8c5a30'); else if (t === 3) dot(x, y, '#7a3040');
+          else if (t >= 4) { g.globalAlpha = this.has(GATE_POWER[t]) ? 1 : 0.45; dot(x, y, GATE[t]); g.globalAlpha = 1; }
+        }
+        for (const l of r.links) if (l.kind === 'door' && this.doorStateIn(l, rid) !== 'hidden') dot(l.cx, l.cy, '#30ff60', 1, 2);
+        for (const sp of r.spawns) if (sp.type === 'marked' && this.save.soldiers[sp.id] !== 'c') { dot(sp.cx, sp.cy, '#ff3028', 1, 2); left++; }
+        if (rid === this.region.id && r.id === this.room.id) { const p = this.player; dot(Math.floor(p.cx / T) - 1, Math.floor((p.y + p.h - 1) / T), '#ffffff', 3, 3); }
+      } else { g.fillStyle = '#2a1c24'; g.font = '16px serif'; g.textAlign = 'center'; g.fillText('?', (ox + r.w / 2) * 2, (oy + (r.top + r.bot) / 2) * 2 + 6); for (const sp of r.spawns) if (sp.type === 'marked' && this.save.soldiers[sp.id] !== 'c') left++; }
+      ox += r.w + gap;
+    }
+    const open = REGIONS.filter((r) => r.id > 0 && Object.keys(this.save.seen).some((k) => k.startsWith(r.id + '/'))).map((r) => r.id);
+    const i = open.indexOf(rid), buttons = [];
+    if (open.length > 1) buttons.push({ label: 'Earlier', value: 'prev' }, { label: 'Later', value: 'next' });
+    buttons.push({ label: 'Back', value: 'back' });
+    this.ui.show({ kind: 'map', quick: true, sound: 'select', esc: 'back', sel: buttons.length - 1, data: { region: rid, left }, buttons,
+      html: `<h2>${rid}. ${region.name}</h2><img class="map" src="${c.toDataURL()}" alt="map"><p class="how">${left} marked ${left === 1 ? 'soldier remains' : 'soldiers remain'} here. Red: a soldier still carrying a ring. Green: a door. Coloured blocks: gates, dim until their power is held.</p>`,
+      onClose: (v) => { if (v === 'back') this.pauseMenu(); else if (open.length) this.mapCard(open[(Math.max(0, i) + (v === 'next' ? 1 : open.length - 1)) % open.length]); else this.pauseMenu(); } });
+  }
+  doorStateIn(l, rid) { return l.after && !this.flag('boss' + l.after) ? 'hidden' : 'open'; }
   settingsMenu(back, sel = 0) {
     const st = this.settings, pct = (v) => Math.round(v * 100) + '%';
     this.ui.show({ kind: 'settings', quick: true, sound: 'select', sel, esc: 'back',
@@ -141,6 +182,7 @@ export class Game {
     this.player = new Player(s.cx * T + 3, (s.cy + 1) * T - 22);
     this.player.face = s.face; this.player.maxHp = this.maxHp(); this.player.hp = hp ? Math.min(hp, this.player.maxHp) : this.player.maxHp;
     this.save.at = { region: region.id, room: def.id, link: link ? link.id : null };
+    this.save.seen[region.id + '/' + def.id] = 1;
     this.maxCamX = Math.max(0, this.room.w * T - W); this.maxCamY = Math.max(0, this.room.h * T - H);
     this.snapCamera();
     this.banner = { text: (sameRegion && this.room.name === this.lastName) ? '' : (this.room.name || region.name), t: 4 };
