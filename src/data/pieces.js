@@ -48,6 +48,13 @@ export function wall(b, x, gT, ch) { b.fill(x, 0, x + 1, gT - 4).fill(x, gT - 3,
 // A pool six wide with a wall standing in it from the top of the room: the way on is under the wall (Deep Breath).
 export function moat(b, x, gT) { b.fill(x, gT, x + 5, gT + 2, '~').fill(x + 2, 0, x + 3, gT); }
 
+// A stone deck `up` rows above the ground, with a plank step at each end: an upper level to fight on
+// and under. Its top is as high as a double-jump ledge, so the reach test decides where one may stand.
+export function deck(b, x0, x1, gT, up = 5) {
+  b.fill(x0, gT - up, x1, gT - up);
+  for (const [p0, p1] of [[x0 - 3, x0 - 2], [x1 + 2, x1 + 3]]) if (b.g[gT - 3][p0] === '.' && b.g[gT - 3][p1] === '.') b.plank(p0, p1, gT - 3);
+}
+
 export const seg = (w, top, items = {}) => ({ w, top, items });
 
 // Breaks up the flat ground between set pieces: shallow ditches, low mounds, two-wide stake pits,
@@ -101,6 +108,7 @@ export function room(id, name, h, segs, o = {}) {
       else if (k === 'moat') each((a) => moat(b, X + (Array.isArray(a) ? a[0] : a), g));
       else if (k === 'pit') each((a) => b.fill(X + a[0], g, X + a[0] + a[1] - 1, g, '^'));
       else if (k === 'pool') each((a) => b.fill(X + a[0], g, X + a[0] + a[1] - 1, g + 1, '~'));
+      else if (k === 'deck') each((a) => deck(b, X + a[0], X + a[1], g, a[2] || 5));
       else if (k === 'plank') each((a) => b.plank(X + a[0], X + a[1], g - a[2]));
       else if (k === 'at') each((a) => b.put(X + a[1], g - 1 - a[2], a[0]));          // [char, column, rows above the ground]
       else if (k === 'door') each((a) => b.door(a[0], X + a[1], g - 1, a[2], a[3] || { look: 'path' }));

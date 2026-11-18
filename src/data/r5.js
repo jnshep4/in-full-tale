@@ -7,10 +7,10 @@ export const region5 = {
   rooms: [
     room('lines', 'Ephes-dammim', 44, [
       seg(20, 32, { door: ['camp', 4, '0/camp/d5', { look: 'path', label: "TO SAUL'S CAMP" }], t: [8], s: [13] }),
-      seg(24, 32, { pit: [4, 3], M: [10], H: [16], A: [21], t: [13] }),
+      seg(24, 32, { pit: [4, 3], M: [10], A: [21], t: [13], deck: [12, 20], at: ['H', 16, 5] }),
       seg(24, 29, { hut: [6, '5'], t: [21] }),
       seg(26, 32, { pit: [[3, 3], [22, 3]], M: [9], A: [14], s: [19] }),
-      seg(26, 32, { M: [5], H: [12], t: [9], s: [20] }),
+      seg(26, 32, { M: [5], t: [9], s: [20], deck: [8, 16], at: ['H', 12, 5] }),
     ], { R: ['east', 'trench/west'] }),
     room('trench', 'The Trench', 44, [
       seg(22, 32, { t: [6], s: [10], M: [17] }),
@@ -20,7 +20,7 @@ export const region5 = {
       seg(22, 32, { hut: [6, '6'] }),
     ], { L: ['west', 'lines/east'], R: ['east', 'valley/west'] }),
     room('valley', 'The Valley Floor', 44, [
-      seg(24, 32, { t: [6], H: [12], M: [19] }),
+      seg(24, 32, { t: [6], H: [12], deck: [15, 20], at: ['M', 19, 5] }),
       seg(24, 32, { hut: [6, '5'] }),
       seg(24, 32, { hut: [6, '5', 'H'] }),
       seg(20, 32, { door: ['arena', 10, 'arena/in', { look: 'arena', label: 'THE CHAMPION' }], t: [6, 14] }),

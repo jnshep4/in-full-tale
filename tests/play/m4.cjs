@@ -125,8 +125,9 @@ const ORDER = ['dash', 'double', 'climb', 'pound', 'sword', 'shield', 'grapple',
       t.ok(card && card.text === info.verse.text && card.ref === info.verse.ref && card.tag === info.tag, `his verse card reads ${info.verse.ref} word for word, then the reference and (KJV)`, card);
       await h.shot(`m4-boss${n}-verse`);
       await step(40); await step(1, ['confirm']); s = await step(20);
-      t.ok(s.relic && s.relic.power === info.power.id, `he drops ${info.power.name}`, s.relic);
-      if (!s.relic) { console.log('  (skipping the rest of this captain)'); continue; }
+      // If David is standing where the captain first stood, he takes the relic the moment it drops.
+      t.ok((s.relic && s.relic.power === info.power.id) || s.card === 'power', `he drops ${info.power.name}`, s.relic);
+      if (!s.relic && s.card !== 'power') { console.log('  (skipping the rest of this captain)'); continue; }
       // If he is still in the cistern: swim up and jump out toward the relic first.
       await ev(() => { const g = __ift.game, p = g.player; for (let i = 0; i < 400 && p.inWater && g.relic; i++) { const d = g.relic.x > p.cx ? 'right' : 'left'; __ift.step(1, i % 12 < 6 ? ['up', d, 'jump'] : ['up', d]); } });
       s = await ev(() => { const g = __ift.game; for (let k = 0; k < 4 && g.relic; k++) { bot.walkTo(g.relic.x - 5, 600); if (g.relic) { __ift.step(1, ['down']); __ift.step(1, ['down', 'jump']); __ift.step(50, []); } } return __ift.step(3, []); });

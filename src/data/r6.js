@@ -8,14 +8,14 @@ export const region6 = {
   rooms: [
     room('gate', 'The Gate of Ekron', 44, [
       seg(20, 32, { door: ['camp', 4, '0/camp/d6', { look: 'path', label: "TO SAUL'S CAMP" }], t: [8], s: [13] }),
-      seg(24, 32, { wall: [3, '5'], M: [10], H: [17], t: [13] }),
+      seg(24, 32, { wall: [3, '5'], M: [10], t: [13], deck: [13, 20], at: ['H', 17, 5] }),
       seg(22, 28, { M: [5], A: [10], cellar: [13] }),
       seg(26, 32, { hut: [6, '5'], t: [21] }),
       seg(24, 26, { tower: [10, 5, 10, 'climb'], M: [4], A: [20] }),
-      seg(20, 32, { M: [6], s: [12], t: [9] }),
+      seg(20, 32, { s: [12], t: [9], deck: [3, 10], at: ['M', 6, 5] }),
     ], { R: ['east', 'presses/west'] }),
     room('presses', 'The Olive Presses', 44, [
-      seg(22, 32, { t: [6], s: [10], H: [16] }),
+      seg(22, 32, { t: [6], s: [10], deck: [12, 18], at: ['H', 16, 5] }),
       seg(24, 29, { M: [4], hut: [8, '1'] }),
       seg(26, 32, { pit: [4, 3], M: [10], cellar: [14], A: [23] }),
       seg(24, 27, { M: [6], H: [14], t: [10] }),

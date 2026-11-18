@@ -10,14 +10,14 @@ export const region4 = {
       seg(22, 32, { M: [4], hut: [8, '5'] }),
       seg(20, 22, { M: [6], l: [13], t: [10] }),
       seg(24, 22, { A: [5], cellar: [9], t: [20] }),
-      seg(20, 32, { M: [5], s: [12], t: [9] }),
+      seg(20, 32, { s: [12], t: [9], deck: [3, 9], at: ['M', 5, 5] }),
     ], { R: ['east', 'lair/west'] }),
     room('lair', "The Lions' Lair", 44, [
-      seg(22, 32, { t: [6], l: [10], M: [17] }),
+      seg(22, 32, { t: [6], l: [10], deck: [13, 18], at: ['M', 17, 5] }),
       seg(30, 32, { sunk: [4], M: [20], H: [25], t: [22] }),
       seg(20, 26, { M: [5], l: [12], A: [16] }),
       seg(26, 32, { hut: [6, '9'], t: [22] }),
-      seg(22, 32, { A: [6], l: [12], M: [17], t: [9] }),
+      seg(22, 32, { l: [12], M: [17], t: [9], deck: [3, 10], at: ['A', 6, 5] }),
     ], { L: ['west', 'thicket/east'], R: ['east', 'grove/west'] }),
     room('grove', 'The Vineyard Road', 44, [
       seg(30, 32, { t: [6], l: [12], M: [20], s: [25] }),

@@ -5,7 +5,7 @@ Provisional: Claude estimated it on 2026-11-18 from the session's own rate-limit
 
 ## Handoff (update after every commit)
 
-- **Status: the build is complete. All five milestones are done and pushed. The scheduled weekly task can be turned off.** The final summary is the next section. Per the brief, no further changes are planned; a later run should change nothing unless James asks for something.
+- **Status: all five milestones are done and pushed. The scheduled weekly task can be turned off.** After the final summary James played the game and sent feedback in the same session (2026-11-18); the changes made in answer are under "After the summary" below and in Decisions. Further work happens only when James asks.
 - **Last run:** run 2, 2026-11-18, 10:14 UTC to 11:52 UTC. It did milestones 2, 3, 4 and 5.
 - **GitHub Pages:** on. `gh api repos/jnshep4/in-full-tale --jq .has_pages` returned `true` at 11:51 UTC on 2026-11-18 (checked by run 2). The run 1 session reported, by message, that James switched Pages on, that the first deployment succeeded at 10:23 UTC serving commit 4f9707f, and that it loaded https://jnshep4.github.io/in-full-tale/ in Chromium with every response 200, nothing off-site, no page errors, and working input at 60 fps. That report covers milestone 1's build, not the final one: run 2 could not reach `jnshep4.github.io` from its environment, so the finished game has not been loaded from the live site by any session. Pages redeploys on each push to `claude/in-full-tale`. **For James, one check:** open the URL and see that the title card appears.
 - **Optional, from James:** a line under "Readings from James" with the Fable weekly percentage after this run, if a later run is ever wanted. See "Calibration" for what the telemetry said.
@@ -18,6 +18,19 @@ Provisional: Claude estimated it on 2026-11-18 from the session's own rate-limit
   - No human has played it. Every check was made by script and by looking at screenshots.
 - **This run's meter total:** 7,734,097 units of the 18,900,000 budget (stop line 17,010,000). Telemetry: `seven_day` 8% at start, 12% at the end; `seven_day_overage_included` 9% at start, 16% at the end.
 - **Estimated runs remaining:** none.
+
+## After the summary: James's first playtest (2026-11-18)
+
+James's two points, and what was done:
+
+1. *The sling made it too easy to hang back and pick off melee soldiers.* On his feet or in the air David now slings level only: no aiming, and the stone flies flat for 84 px (a tap) to 132 px (full charge, about eight tiles), then drops. To hit anyone above or below he must jump into line. Spearmen chase at 82 px/s instead of 64. The aimed arc survives only from a perch (clinging to a wall, hanging from the cord, afloat), because Maroz, Banith and Yishvar are built around it. This replaces the brief's "aimed, chargeable shots with an arc" at James's direction. His other suggestion, giving the arc to a bow later, is open: it would be an eleventh power or a change to one of the ten.
+2. *A soldier up high could be killed from below; his ring fell, then jumped back up out of reach.* The ring no longer returns to the post for having dropped: it stays on lower ground until taken. It still returns from stakes, pits, deep water, and from a perch more than 40 px above the post. With the level sling, the soldiers behind height gates cannot be hit from below at all (a new check in `tests/play/m2.cjs` tries every height of a jump at the Picket Line's watch rock).
+
+James then asked to move to the next stage. All five milestones being done, the next stage was taken to be the first items of "If more work is ever wanted": balance for the closer fighting, and less plain levels.
+- Captains' lunge slowed from 320 to 270 px/s. Every scripted fight was rerun at the new range; all ten are won unassisted (Akhtal on the second attempt, the rest on the first, several with 1 or 2 health left).
+- 26 stone decks were added across regions 2-10 (`deck` in `src/data/pieces.js`): an upper level five rows up with a plank step at each end, and one soldier moved up onto each. The reach test rejected one deck beside a climb gate, which was removed.
+
+Meter at this point: 9,814,982 units. The whole suite passes: 212 playthrough checks, the verse test, the reach test.
 
 ## Final summary (2026-11-18)
 
@@ -64,6 +77,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | milestone 3 (read just before committing) | 4,247,808 |
 | 2 | milestone 4 (read just before committing) | 6,727,700 |
 | 2 | milestone 5 and final summary (read just before committing) | 7,734,097 |
+| 2 | after James's playtest: level sling, rings, decks (read just before committing) | 9,814,982 |
 
 ## Calibration
 
@@ -248,6 +262,9 @@ One line per choice, newest last.
 - 2026-11-18: Title screen, pause sheet (Esc: per-region trophy counts, captains fallen, the controls of each power held), settings (sound, music, screen shake; saved under their own key so erasing a save keeps them), generated music (camp, field, captain; root and tune shift by region). Gateways in camp show each region's count.
 - 2026-11-18: Between set pieces, `vary()` in `src/data/pieces.js` cuts shallow ditches, raises low mounds, sets two-wide stake pits and hangs planks, chosen by a fixed hash. Mounds and planks are kept 28 columns from any declared gate. Pass `{ plain: true }` to `room()` to switch it off for a room.
 - 2026-11-18: Scenery (`src/gfx/decor.js`): trees, vines, jars, columns, braziers, pennons and the like are scattered over open ground by a fixed hash, per theme. Nothing in it collides.
+
+- 2026-11-18 (James's feedback): the sling is level and short-ranged on foot; aimable only from a wall, the cord, or afloat. Rings that drop stay where they land. See "After the summary".
+- 2026-11-18: `deck: [col0, col1, rowsUp]` in a segment builds an upper stone level with plank steps; soldiers go on it with `at: [char, col, rowsUp]`.
 
 ## Liberties taken with the text
 
