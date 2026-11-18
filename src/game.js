@@ -59,7 +59,7 @@ export class Game {
     const cont = this.hadSave && (this.save.played > 1 || this.save.tally > 0);
     const buttons = cont ? [{ label: 'Continue', value: 'go' }, { label: 'New game', value: 'new' }, { label: 'Settings', value: 'set' }] : [{ label: 'Begin', value: 'go' }, { label: 'Settings', value: 'set' }];
     this.ui.show({ kind: 'title', buttons, sound: 'select', quick: true,
-      html: '<h1>In Full Tale</h1><div class="orn"></div><p class="say">David, a sling, and the price King Saul has set.</p><p class="how">Arrows or WASD to move. Z or Space to jump. Hold X to whirl the sling, up and down to aim, release to loose. Up at a gateway to enter. Esc for the tally sheet and settings.</p>',
+      html: '<h1>In Full Tale</h1><div class="orn"></div><p class="say">David, a sling, and the price King Saul has set.</p><p class="how">Arrows or WASD to move. Z or Space to jump. Hold X to whirl the sling, release to loose: it flies level and not far, so close in and jump to reach. Up at a gateway to enter. Esc for the tally sheet and settings.</p>',
       onClose: (v) => {
         if (v === 'set') this.settingsMenu(() => this.title());
         else if (v === 'new') this.ui.show({ kind: 'title', quick: true, sound: 'select', html: '<h2>Begin again?</h2><p class="say">The saved tale will be erased.</p>', buttons: [{ label: 'Back', value: 'back' }, { label: 'Erase and begin', value: 'erase' }], onClose: (w) => { if (w === 'erase') { this.resetSave(); this.hadSave = false; } else this.title(); } });
@@ -388,7 +388,7 @@ export class Game {
     const p = this.player;
     return {
       x: clamp(p.cx + p.face * 22 - W / 2, 0, this.maxCamX),
-      y: clamp(p.cy - H * 0.56 - (p.charging && this.input.held.up ? 18 : 0), 0, this.maxCamY),
+      y: clamp(p.cy - H * 0.56, 0, this.maxCamY),
     };
   }
   snapCamera() { const t = this.camTarget(); this.cam.x = t.x; this.cam.y = t.y; }
@@ -513,9 +513,22 @@ export class Game {
 
   // Dotted preview of the stone's flight, so the arc can be aimed.
   drawAimArc(ctx, cx, cy) {
-    const p = this.player, m = p.muzzle(), sp = p.shotSpeed();
+    const p = this.player, m = p.muzzle(), sp = p.shotSpeed(), full = p.charge >= 1;
+    if (!p.aimable()) {
+      // A level shot: dots out to where the stone will begin to drop.
+      const n = Math.floor(p.range() / 6);
+      for (let i = 1; i <= n; i++) {
+        const x = m.x + p.face * i * 6;
+        if (this.room.solid(Math.floor(x / T), Math.floor(m.y / T))) break;
+        ctx.globalAlpha = (1 - i / (n + 4)) * (0.5 + 0.5 * p.charge);
+        ctx.fillStyle = full ? '#ffffff' : '#f1e2c0';
+        ctx.fillRect(Math.round(x - cx), Math.round(m.y - cy), i === n ? 2 : 1, i === n ? 2 : 1);
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
     let x = m.x, y = m.y, vx = Math.cos(p.aim) * sp * p.face + p.vx * 0.35, vy = -Math.sin(p.aim) * sp;
-    const step = 1 / 120, full = p.charge >= 1;
+    const step = 1 / 120;
     for (let i = 1; i <= 96; i++) {
       vy += SLING.gravity * step; x += vx * step; y += vy * step;
       if (this.room.solid(Math.floor(x / T), Math.floor(y / T))) break;
@@ -558,7 +571,7 @@ export class Game {
       ctx.fillStyle = '#ffd680'; ctx.fillRect(bx + bw / 2, by - 1, 1, 6);
     }
     if (this.save.played < 30 && !this.boss) {
-      const s = 'MOVE: ARROWS   JUMP: Z   SLING: HOLD X, AIM UP/DOWN';
+      const s = 'MOVE: ARROWS   JUMP: Z   SLING: HOLD X, RELEASE';
       ctx.globalAlpha = clamp(30 - this.save.played, 0, 1) * 0.9;
       drawText(ctx, s, Math.round((W - textWidth(s)) / 2), H - 14, '#d9cba8', 1);
       ctx.globalAlpha = 1;

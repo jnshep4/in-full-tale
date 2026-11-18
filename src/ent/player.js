@@ -7,7 +7,7 @@ import { Stone } from './stone.js';
 
 export const PHYS = { run: 132, accel: 1500, airAccel: 1000, jump: 330, gravUp: 900, gravDown: 1300, maxFall: 430, cutVy: -110, jump2: 300, climb: 72, pound: 540 };
 export const DASH = { speed: 310, time: 0.16, cool: 0.42 };
-export const SLING = { chargeTime: 0.7, minSpeed: 250, maxSpeed: 470, gravity: 430, cooldown: 0.16 };
+export const SLING = { chargeTime: 0.7, minSpeed: 250, maxSpeed: 470, gravity: 430, cooldown: 0.16, rangeMin: 84, rangeMax: 132, drop: 1500 };
 export const SWORD = { time: 0.18, cool: 0.34, reach: 26, dmg: 3 };
 export const CORD = { range: 112, speed: 460 };
 export const AIM = { level: 0.14, high: 0.78, lob: 1.36, low: -0.55, min: -1.3, max: 1.45, rate: 2.2 };   // radians above the horizon; rate in radians per second
@@ -219,19 +219,19 @@ export class Player {
   // Sling: hold to charge, release to loose. Aim with up/down, or the right stick.
   sling(g, dt, control, dashing) {
     const inp = g.input;
-    // Before the sling is whirling, a held direction picks the starting angle (level, high with
-    // up + forward, a lob with up alone, low with down). While it whirls, up and down turn the aim
-    // steadily, so any angle from steeply down to nearly straight up can be found.
-    if (inp.aimStick) {
+    // On his feet or in the air David slings straight ahead, level, and the stone carries only a
+    // short way (SLING.rangeMin to rangeMax), so he has to come within a spear's rush of his man and
+    // jump to reach anyone above or below. From a perch (clinging to a wall, hanging from the cord,
+    // afloat) he has time to pick an angle: there up and down turn the aim, and the stone flies in an arc.
+    const perch = this.aimable();
+    if (!perch) this.aim = 0;
+    else if (inp.aimStick) {
       this.aim = lerp(this.aim, Math.atan2(-inp.aimY, Math.abs(inp.aimX) < 0.15 ? 0.15 : Math.abs(inp.aimX)), clamp(dt * 16, 0, 1));
       if (Math.abs(inp.aimX) > 0.3) this.face = Math.sign(inp.aimX);
     } else if (this.charging) {
       if (inp.held.up) this.aim = Math.min(AIM.max, this.aim + AIM.rate * dt);
       else if (inp.held.down) this.aim = Math.max(AIM.min, this.aim - AIM.rate * dt);
-    } else {
-      const want = inp.held.up ? (inp.x !== 0 || this.cling ? AIM.high : AIM.lob) : inp.held.down ? AIM.low : AIM.level;
-      this.aim = lerp(this.aim, want, clamp(dt * 16, 0, 1));
-    }
+    } else this.aim = lerp(this.aim, AIM.level, clamp(dt * 16, 0, 1));
     if (control && inp.held.fire && this.cool <= 0 && !dashing && this.swordT <= 0) {
       if (this.cling && !this.charging) this.face = -this.cling;          // from a wall he slings outward
       this.charging = true;
@@ -246,6 +246,10 @@ export class Player {
 
   sweptBack(g) { this.x = this.safe.x; this.y = this.safe.y; this.vx = this.vy = 0; this.dashT = 0; this.pounding = false; this.cling = 0; this.inv = 0; this.hurt(g, 1, 0); }
 
+  aimable() { return !!(this.cling || this.hang || this.zip || this.inWater); }
+  // How far a level stone carries before it drops, in pixels.
+  range() { return lerp(SLING.rangeMin, SLING.rangeMax, this.charge); }
+
   loose(g) {
     const m = this.muzzle(), sp = this.shotSpeed(), tags = [];
     if (this.charge >= 1) tags.push('full');
@@ -254,7 +258,8 @@ export class Player {
     if (this.cling) tags.push('wall');
     if (this.hang || this.zip) tags.push('hang');
     if (this.inWater) tags.push('swim');
-    g.stones.push(new Stone(m.x, m.y, Math.cos(this.aim) * sp * this.face + this.vx * 0.35, -Math.sin(this.aim) * sp, this.charge, tags));
+    if (this.aimable()) g.stones.push(new Stone(m.x, m.y, Math.cos(this.aim) * sp * this.face + this.vx * 0.35, -Math.sin(this.aim) * sp, this.charge, tags));
+    else g.stones.push(new Stone(m.x, m.y, sp * this.face, 0, this.charge, tags, this.range()));
     g.sfx.play('sling', this.charge);
     this.cool = SLING.cooldown; this.throwT = 0.14;
   }

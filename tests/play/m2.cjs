@@ -65,6 +65,28 @@ const { launch, checker } = require('./helpers.cjs');
   await place(26, 24); await h.shot('m2-watch-rock');
   await place(72, 27); await h.shot('m2-mesa');
 
+  console.log('soldiers on gated ledges (feedback of 2026-11-18)');
+  await ev(() => __ift.game.loadRoom(1, 'picket', 'west')); await step(5);
+  const ledge = await ev(() => {
+    const g = __ift.game, p = g.player, sol = g.soldiers.find((x) => x.marked && Math.abs(x.x - 34 * 16) < 40 && x.y < 20 * 16);
+    g.soldiers = [sol]; sol.update = () => {}; sol.x = 31 * 16 + 1; const hp0 = sol.hp;       // hold him at the very edge of the watch rock
+    // From the ground beside the rock, at every height of a jump, loose a full-charge stone at him.
+    for (let k = 0; k < 14; k++) {
+      p.x = 26 * 16; p.y = 28 * 16 - 22; p.vx = p.vy = 0; p.face = 1; __ift.step(2, ['right']); __ift.step(44, ['fire']);
+      __ift.step(1, ['fire', 'jump']); __ift.step(2 + k * 2, ['fire', 'jump']); __ift.step(1, ['jump']); __ift.step(50, []);
+    }
+    const untouched = sol.hp === hp0;
+    // Now fell him where he stands and knock the ring off the rock: it must stay on the ground to be taken.
+    sol.die(g, -1); const tr = g.trophies[0]; tr.vx = -120; tr.vy = -200; p.x = 10 * 16; __ift.step(360, []);
+    const low = { rest: tr.rest, y: Math.round(tr.cy), home: Math.round(tr.home.y) };
+    for (let k = 0; k < 4 && g.trophies.length; k++) { bot.walkTo(tr.cx - 5); __ift.step(30, []); }
+    return { untouched, low, tally: g.save.tally };
+  });
+  t.ok(ledge.untouched, 'the soldier on the watch rock cannot be hit from the ground below, at any height of a jump', ledge);
+  t.ok(ledge.low.rest && ledge.low.y > ledge.low.home + 60, 'a ring that drops from a ledge stays where it lands for six seconds and more', ledge.low);
+  t.ok(ledge.tally === 1, 'and can be picked up there', ledge.tally);
+  await ev(() => { const g = __ift.game; g.save.tally = 0; g.save.soldiers = {}; g.persist(); });
+
   console.log('Shalmek');
   await place(99, 27); await step(20, ['right']); await ev(() => bot.walkTo(100 * 16 + 3)); s = await step(2);
   t.ok(s.door === 'arena', "David stands at the gate of Shalmek's ground", s.door);
@@ -75,7 +97,8 @@ const { launch, checker } = require('./helpers.cjs');
   await step(1, ['left']); await step(1, ['up']); s = await step(3);
   t.ok(s.room === 'arena', 'the way out is barred while he stands');
   let fight = null, attempts = 0;
-  for (; attempts < 4; attempts++) {
+  for (; attempts < 6; attempts++) {
+    await ev((k) => { let sd = (1000 + k * 7919 + 12345) >>> 0; __ift.game.rand = () => { sd = (sd + 0x6D2B79F5) | 0; let x = Math.imul(sd ^ (sd >>> 15), 1 | sd); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }, attempts);
     await step(60);
     if (attempts === 0) { await ev(() => bot.fightBoss(260)); await h.shot('m2-boss-fight-1'); await ev(() => bot.fightBoss(240)); await h.shot('m2-boss-fight-2'); }
     fight = await ev(() => bot.fightBoss(12000));

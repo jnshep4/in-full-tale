@@ -35,9 +35,10 @@ export class Trophy {
       }
       this.spin += dt * (4 + Math.abs(this.vx) * 0.08);
     }
-    // Lost places: stakes, pits, deep water David cannot yet enter, or a resting place far from the
-    // soldier's post (a ledge he might not reach). From any of them the ring hops back to the post.
-    const strayed = this.rest && (Math.abs(this.cx - this.home.x) > 200 || Math.abs(this.cy - this.home.y) > 40);
+    // Lost places: stakes, pits, deep water David cannot yet enter. From them the ring hops back to the post.
+    // A ring that has dropped to lower ground stays there to be picked up. Only one that has bounced up
+    // onto something well above where its soldier stood is brought back.
+    const strayed = this.rest && this.cy < this.home.y - 40;
     if (this.age > 0.3 && (strayed || touches(g.room, this, SPIKE) || (touches(g.room, this, WATER) && !g.has('swim')) || this.y > g.room.h * T + 30)) {
       g.puff(this.cx, this.cy, 6, '#fff3c8', 60, { glow: true, life: 0.3 });
       this.x = this.home.x - 3; this.y = this.home.y - 3; this.vx = 0; this.vy = -150; this.rest = false;

@@ -39,11 +39,10 @@ const { launch, checker } = require('./helpers.cjs');
   c = await step(1);
   t.ok(c.stones === 1, 'releasing looses one stone', c.stones);
   const flat = await ev(() => { const st = __ift.game.stones[0], x0 = st.x, y0 = st.y; while (__ift.game.stones.length) __ift.step(1, []); return { dx: st.x - x0, dy: st.y - y0 }; });
-  t.ok(flat.dx > 180 && flat.dy > 10, 'a level full-charge shot flies far and drops to the ground', flat);
+  t.ok(flat.dx > 125 && flat.dx < 190 && flat.dy > 10, 'a full-charge stone flies level for about eight tiles, then drops', flat);
   await step(45, ['fire', 'up', 'right']); await step(1, ['up', 'right']);
-  const arc = await ev(() => { const st = __ift.game.stones[0], ys = []; for (let i = 0; i < 90 && __ift.game.stones.length; i++) { ys.push(st.y); __ift.step(1, []); } return ys; });
-  const apex = Math.min(...arc);
-  t.ok(apex < arc[0] - 40 && arc[arc.length - 1] > apex + 30, 'aimed up, the stone rises and falls in an arc', [arc[0], apex, arc[arc.length - 1]]);
+  const lvl = await ev(() => { const st = __ift.game.stones[0], ys = []; for (let i = 0; i < 12 && __ift.game.stones.length; i++) { ys.push(st.y); __ift.step(1, []); } return ys; });
+  t.ok(Math.max(...lvl) - Math.min(...lvl) < 0.5, 'on his feet David cannot aim: holding up changes nothing, the stone still flies level', lvl.slice(0, 4));
   await step(30);
 
   console.log('marked soldier and trophy');

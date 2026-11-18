@@ -155,7 +155,7 @@ export class Boss {
     const A = this.attack, sp = this.speed();
     this.state = 'act'; this.struck = false;
     switch (A.id) {
-      case 'thrust': this.t = 0.34; this.vx = this.face * (A.v || 320); g.sfx.play('thrust'); break;
+      case 'thrust': this.t = 0.34; this.vx = this.face * (A.v || 270); g.sfx.play('thrust'); break;
       case 'sweep': this.t = 0.3; this.vx = this.face * 90; g.sfx.play('swing'); break;
       case 'charge': this.t = 2.2; this.vx = this.face * (A.v || 250) * sp; g.sfx.play('roar'); break;
       case 'leap': {

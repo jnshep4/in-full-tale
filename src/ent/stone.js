@@ -3,15 +3,17 @@ import { overlap } from '../core.js';
 import { SLING } from './player.js';
 
 export class Stone {
-  constructor(x, y, vx, vy, charge, tags = []) {
-    this.tags = tags;
+  // range: for a level shot from the ground, how far it flies flat before it drops. Omitted for an aimed arc.
+  constructor(x, y, vx, vy, charge, tags = [], range = 0) {
+    this.tags = tags; this.range = range;
     this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.charge = charge;
     this.dmg = tags.includes('heavy') ? 5 : charge >= 1 ? 3 : charge >= 0.5 ? 2 : 1;
     this.life = 3; this.dead = false; this.px = x; this.py = y;
   }
   update(g, dt) {
     this.px = this.x; this.py = this.y;
-    this.vy += SLING.gravity * dt;
+    if (this.range > 0) { this.range -= Math.abs(this.vx) * dt; if (this.range <= 0) { this.range = -1; this.vx *= 0.45; } }
+    else this.vy += (this.range < 0 ? SLING.drop : SLING.gravity) * dt;
     this.x += this.vx * dt; this.y += this.vy * dt;
     this.life -= dt;
     if (this.life <= 0 || this.y > g.room.h * 16 + 40) { this.dead = true; return; }

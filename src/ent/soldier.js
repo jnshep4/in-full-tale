@@ -8,7 +8,7 @@ import { drawSoldier, drawSoldierLight, drawLion } from '../gfx/chars.js';
 import { Shot } from './boss.js';
 
 const KIND = {
-  spear: { w: 12, h: 24, hp: [3, 4], walk: 28, chase: 64, sight: 124, reach: 36, guard: 0.5, wind: 0.42 },
+  spear: { w: 12, h: 24, hp: [3, 4], walk: 28, chase: 82, sight: 124, reach: 36, guard: 0.5, wind: 0.42 },
   archer: { w: 12, h: 24, hp: [2, 3], walk: 18, chase: 0, sight: 232, reach: 232, guard: 0, wind: 0.75 },
   heavy: { w: 14, h: 26, hp: [7, 8], walk: 20, chase: 46, sight: 120, reach: 36, guard: 1, wind: 0.55 },
   lion: { w: 22, h: 14, hp: [4, 4], walk: 36, chase: 118, sight: 150, reach: 74, guard: 0, wind: 0.32 },

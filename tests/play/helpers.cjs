@@ -43,7 +43,7 @@ function installBot() {
         const roomW = g().room.w * 16, wallBehind = dir > 0 ? p.x - 32 : roomW - 32 - (p.x + p.w);
         const atk = b.attack ? b.attack.id : '';
         let move = null, jump = false;
-        if (adx < 96) move = away; else if (adx > 175) move = toward;
+        if (adx < 78) move = away; else if (adx > 112) move = toward;
         if (b.state === 'tele' && (atk === 'thrust' || atk === 'charge' || atk === 'sweep') && adx < 180) move = away;
         if (b.state === 'act' && (atk === 'thrust' || atk === 'sweep') && adx < 120) jump = true;
         if (b.state === 'act' && atk === 'charge' && adx < 90) jump = true;
@@ -143,7 +143,7 @@ function installBot() {
         if (opts.extra) opts.extra({ b, p, keys, dir, adx });
         if (p.face !== dir) { ift.step(1, [toward]); log.frames++; continue; }        // let go and turn to face him
         const open = b.state === 'recover' || b.state === 'stagger' || b.state === 'idle' || b.state === 'tele';
-        const loose = p.charge >= 1 && adx < 230 && (open || p.charge >= 1 && i % 50 === 0);
+        const loose = p.charge >= 1 && adx < 124 && (open || p.charge >= 1 && i % 50 === 0);
         if (!loose) keys.push('fire');
         ift.step(1, keys); log.frames++;
       }
@@ -177,7 +177,7 @@ function installBot() {
         if (adx < 74 && behind !== AIR) keys.push(flee);         // back away while there is ground; facing stays locked
         if ((s.state === 'windup' || s.state === 'thrust') && adx < 70 && p.onGround && !g().input.held.jump) keys.push('jump');
         else if (!p.onGround && p.vy < 0) keys.push('jump');
-        const loose = p.face === dir && ((p.charge >= 1 && adx < 170) || (p.charge >= 0.55 && adx < 60));
+        const loose = p.face === dir && ((p.charge >= 1 && adx < 118) || (p.charge >= 0.55 && adx < 60));
         if (!loose) keys.push('fire');
         ift.step(1, keys);
         log.frames++;
