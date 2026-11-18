@@ -81,6 +81,19 @@ export class Sfx {
         this.noise({ t: 0.18, v: 0.03, f: 7000, f2: 9000, q: 4, at: 0.05 });
         break;
       }
+      case 'dash': this.noise({ t: 0.18, v: 0.2, f: 900, f2: 3800, q: 1.2 }); this.tone({ f: 300, f2: 700, t: 0.12, type: 'triangle', v: 0.06 }); break;
+      case 'break': this.noise({ t: 0.25, v: 0.3, f: 1800, f2: 300, q: 0.8 }); this.tone({ f: 160, f2: 60, t: 0.18, type: 'square', v: 0.1 }); break;
+      case 'door': this.tone({ f: 196, f2: 262, t: 0.25, type: 'triangle', v: 0.1 }); this.noise({ t: 0.2, v: 0.08, f: 400, f2: 200, type: 'lowpass' }); break;
+      case 'locked': this.tone({ f: 150, f2: 120, t: 0.12, type: 'square', v: 0.08 }); this.tone({ f: 120, f2: 100, t: 0.14, type: 'square', v: 0.08, at: 0.13 }); break;
+      case 'splash': this.noise({ t: 0.35, v: 0.25, f: 1200, f2: 300, q: 0.7 }); break;
+      case 'roar': this.tone({ f: 110, f2: 70, t: 0.7, type: 'sawtooth', v: 0.16 }); this.tone({ f: 165, f2: 98, t: 0.7, type: 'square', v: 0.07 }); this.noise({ t: 0.6, v: 0.12, f: 300, f2: 120, type: 'lowpass' }); break;
+      case 'slam': this.noise({ t: 0.4, v: 0.4, f: 220, f2: 50, type: 'lowpass' }); this.tone({ f: 80, f2: 35, t: 0.35, type: 'sine', v: 0.3 }); break;
+      case 'throw': this.noise({ t: 0.16, v: 0.14, f: 500, f2: 2400, q: 2 }); break;
+      case 'swing': this.noise({ t: 0.14, v: 0.2, f: 2600, f2: 600, q: 1.5 }); break;
+      case 'card': [392, 494, 587, 784].forEach((f, i) => this.tone({ f, t: 0.9, type: 'sine', v: 0.07, at: 0.12 * i, a: 0.05 })); break;
+      case 'power': [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone({ f, t: 0.5, type: 'triangle', v: 0.1, at: 0.09 * i })); this.noise({ t: 0.8, v: 0.04, f: 6000, f2: 9000, q: 3, at: 0.3 }); break;
+      case 'bossfall': [220, 185, 147, 110, 82].forEach((f, i) => this.tone({ f, t: 0.5, type: 'sawtooth', v: 0.1, at: 0.16 * i })); this.noise({ t: 1.2, v: 0.14, f: 500, f2: 5000, q: 1 }); break;
+      case 'select': this.tone({ f: 880, t: 0.05, type: 'square', v: 0.05 }); break;
       case 'heal': this.tone({ f: 523, f2: 784, t: 0.2, type: 'triangle', v: 0.12 }); break;
       case 'hurt': this.tone({ f: 330, f2: 95, t: 0.24, type: 'sawtooth', v: 0.14 });
         this.noise({ t: 0.14, v: 0.16, f: 800, f2: 200, type: 'lowpass' }); break;

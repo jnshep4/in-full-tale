@@ -2,7 +2,7 @@
 // blinks until David collects it. It never expires. If it lands somewhere it could be lost (stakes,
 // a pit) it hops back to where its soldier was posted, which the reachability test covers.
 import { T, overlap } from '../core.js';
-import { moveBody, touches, SPIKE } from '../world/room.js';
+import { moveBody, touches, SPIKE, WATER } from '../world/room.js';
 import { drawRing } from '../gfx/chars.js';
 
 export class Trophy {
@@ -35,7 +35,10 @@ export class Trophy {
       }
       this.spin += dt * (4 + Math.abs(this.vx) * 0.08);
     }
-    if (this.age > 0.3 && (touches(g.room, this, SPIKE) || this.y > g.room.h * T + 30)) {
+    // Lost places: stakes, pits, deep water David cannot yet enter, or a resting place far from the
+    // soldier's post (a ledge he might not reach). From any of them the ring hops back to the post.
+    const strayed = this.rest && (Math.abs(this.cx - this.home.x) > 200 || Math.abs(this.cy - this.home.y) > 40);
+    if (this.age > 0.3 && (strayed || touches(g.room, this, SPIKE) || (touches(g.room, this, WATER) && !g.has('swim')) || this.y > g.room.h * T + 30)) {
       g.puff(this.cx, this.cy, 6, '#fff3c8', 60, { glow: true, life: 0.3 });
       this.x = this.home.x - 3; this.y = this.home.y - 3; this.vx = 0; this.vy = -150; this.rest = false;
       g.puff(this.cx, this.cy, 6, '#fff3c8', 60, { glow: true, life: 0.3 });

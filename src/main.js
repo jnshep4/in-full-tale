@@ -11,12 +11,14 @@ function fit() {
   const s = Math.max(1, Math.floor(Math.min(innerWidth / W, innerHeight / H)));
   canvas.style.width = frameEl.style.width = W * s + 'px';
   canvas.style.height = frameEl.style.height = H * s + 'px';
+  ui.style.setProperty('--s', s);
 }
 addEventListener('resize', fit); fit();
 
 let storage = null;
 try { storage = params.has('nosave') ? null : window.localStorage; } catch (e) { storage = null; }
-const game = new Game(canvas, { storage });
+// ?at=region/room starts a fresh save in that room (used by the scripted playthroughs).
+const game = new Game(canvas, { storage, ui, at: params.get('at') });
 mountDebug(game, ui);
 
 let realtime = !test, acc = 0, last = performance.now(), fps = 60;

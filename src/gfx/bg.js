@@ -95,6 +95,16 @@ const THEMES = {
       { c: paintRidge({ base: 163, amp: 15, color: '#19131f', rim: '#3c2638', haze: '#2a1a2b', seed: 23, trees: 30, camp: 2, treeScale: 1.7 }), fx: 0.34, fy: 0.1 },
     ],
   }),
+  // Saul's camp: later in the evening, the valley in blue shadow, Israelite fires on the near ridge.
+  camp: () => ({
+    ambient: 'rgb(128,128,170)',
+    sky: paintSky(31, [[0, '#070818'], [0.3, '#141a3a'], [0.55, '#2a2a55'], [0.72, '#5a3660'], [0.85, '#a8504f'], [0.94, '#e08a4a'], [1, '#f6c27a']], { x: 110, y: 170, r: 11 }),
+    layers: [
+      { c: paintRidge({ base: 126, amp: 26, color: '#3a3460', rim: '#7a5a80', haze: '#8a5a6a', seed: 41 }), fx: 0.06, fy: 0.02 },
+      { c: paintRidge({ base: 146, amp: 20, color: '#232444', rim: '#4a4470', haze: '#4a3a5a', seed: 42, trees: 40 }), fx: 0.16, fy: 0.05 },
+      { c: paintRidge({ base: 166, amp: 12, color: '#12121f', rim: '#2c2c48', haze: '#1e1a2c', seed: 43, trees: 26, camp: 4, treeScale: 1.7 }), fx: 0.34, fy: 0.1 },
+    ],
+  }),
 };
 
 export function makeBackdrop(theme) { return (THEMES[theme] || THEMES.hills)(); }

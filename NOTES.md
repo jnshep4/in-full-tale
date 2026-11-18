@@ -5,21 +5,21 @@ Provisional: Claude estimated it on 2026-11-18 from the session's own rate-limit
 
 ## Handoff (update after every commit)
 
-- **Last run:** run 1, 2026-11-17. Stopped after milestone 1, as the brief required while RUN_BUDGET was unset. On 2026-11-18 James asked for a ballpark of half his weekly Fable limit; RUN_BUDGET is now set (provisional), so the next run starts milestone 2.
-- **Milestone status:** 1 done and pushed. 2, 3, 4, 5 not started.
-- **Blocked on James (one-time, about 30 seconds):** GitHub Pages is not switched on. The session cannot do it (the Pages API is closed to it). In the repo: Settings > Pages > Source "Deploy from a branch" > branch `claude/in-full-tale`, folder `/ (root)` > Save. The game will then be at https://jnshep4.github.io/in-full-tale/. The branch already carries `.nojekyll` and needs no build step.
+- **Current run:** run 2, started 2026-11-18 10:14 UTC. Telemetry at start: `seven_day` 8%, `seven_day_overage_included` 9%. Second-guard stop values: 53% and 54%.
+- **Milestone status:** 1 and 2 done and pushed. 3 in progress (see "Next steps"). 4, 5 not started.
+- **Blocked on James (one-time, about 30 seconds):** GitHub Pages is not switched on. The session cannot do it (the Pages API is closed to it). In the repo: Settings > Pages > Source "Deploy from a branch" > branch `claude/in-full-tale`, folder `/ (root)` > Save. The game will then be at https://jnshep4.github.io/in-full-tale/. The branch already carries `.nojekyll` and needs no build step. Check with `gh api repos/jnshep4/in-full-tale --jq .has_pages`.
 - **Optional, from James (better calibration):** after any run, read the Fable weekly meter on the usage page and add a line under "Readings from James". Until then the provisional RUN_BUDGET stands.
 - **Next steps, in priority order:**
-  1. At the start of the run, follow "Calibration > Start of every run": check for a newer reading from James, and record the starting utilization from the rate-limit telemetry.
-  2. Milestone 2: finish region 1 (20 marked soldiers across several rooms, room-to-room exits, the captain Shalmek, the verse card as a DOM overlay in `#ui`, the dash power-up) and build the hub at Saul's camp.
-  3. Extend `src/world/reach.js` and `tests/reach.test.mjs` with gates and power sets as soon as the first gate tile exists (see "Reachability model").
-  4. Add `tests/play/m2.cjs`: boss fight, verse card text read from the DOM and compared with `src/data/verses.js`, power pickup.
+  1. Milestone 3: powers 2-5 in `src/ent/player.js` (double jump, climb, pound, sword), soldier kinds (archer, heavy, lion), regions 2-5 with their captains in `src/data/bosses.js`, Goliath and the sword pickup card, the 100 scene at the hub, Ending A in Saul's tent.
+  2. Milestone 4: powers 6-10, regions 6-10, Ending B.
+  3. Milestone 5: title screen, music, settings, balance.
 - **Known bugs and rough edges:**
-  - A trophy that bounces onto a ledge David cannot reach from where the soldier fell would be stuck there. No such ledge exists in the current room, and stakes and pits already send a trophy back to its soldier's post. Keep this in mind when placing soldiers near gated ledges; the simple fix is to send any trophy still unreachable after a few seconds back to its post.
   - The control hint bar shows for the first 30 seconds of play time on a save and has no "seen" flag.
   - No title screen, music, or settings yet (milestone 5). Audio starts on the first key press.
-- **This run's meter total:** run 1 ended its build at 1,890,973 units on 2026-11-17. Follow-up questions on 2026-11-18 brought the session to about 2,388,876. About 300,000 of run 1 went to getting the repository created and attached before any code was written.
-- **Estimated runs remaining:** 2, possibly 3, at the provisional budget. Basis: milestone 1's game code cost about 1.6 million units; milestones 2-5 look like 10 to 12 times that work, and long sessions cost more per step as the context grows. Revise after run 2.
+  - Grass is drawn on floors inside caves and huts.
+  - Shalmek can be fought from the planks, where his thrust and ground waves cannot reach. Left in: he still leaps and throws.
+- **This run's meter total:** see the Meter log; last reading is the newest row.
+- **Estimated runs remaining:** revise at the end of run 2.
 
 ## Readings from James
 
@@ -47,6 +47,8 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 1 | 0feb40c notes update (read just before committing) | 1,853,196 |
 | 1 | end of the 2026-11-17 build session, final report included | 1,890,973 |
 | 1 | 2026-11-18 follow-up: calibration and RUN_BUDGET (read just before committing) | 2,388,876 |
+| 2 | run start, 2026-11-18 10:14 UTC (telemetry: seven_day 8%, overage_included 9%) | 119,194 |
+| 2 | milestone 2 (read just before committing) | 1,624,926 |
 
 ## Calibration
 
@@ -85,7 +87,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 
 1. `git fetch origin claude/in-full-tale && git checkout claude/in-full-tale`. Read BRIEF.md, then this file.
 2. `npm test` runs the verse-text test and the reachability test. Both must pass before every commit.
-3. `node tests/play/m1.cjs` runs the scripted playthrough in headless Chromium and writes screenshots to `tests/shots/` (git-ignored). Look at them.
+3. `node tests/play/m1.cjs` and `node tests/play/m2.cjs` (one per milestone; `npm run test:play` runs all) play the game in headless Chromium and write screenshots to `tests/shots/` (git-ignored). Look at them. `node tests/play/look.cjs [region]` is not a test: it writes an overview map and in-game frames of every room, for checking layouts by eye.
 4. `node tests/serve.mjs` serves the game at http://127.0.0.1:8080/ for manual checks. ES modules need http, not file://.
 5. After every commit: `python3 tools/meter.py`, log the number above, update the Handoff, push.
 
@@ -93,39 +95,52 @@ Environment facts learned in run 1: the session started with no repository attac
 
 ## Code map
 
-- `index.html`: one 480x270 canvas scaled by whole multiples with nearest-neighbor, plus `#ui` for DOM overlays (debug menu now; verse cards and scenes from milestone 2).
-- `src/main.js`: boot, fixed 60 Hz step, `window.__ift` hook. `?test=1` stops the live loop so scripts step it (`__ift.step(n, ['right','jump'])`); `?nosave=1` disables localStorage.
-- `src/game.js`: play state. Room loading, entity lists, camera, light map (ambient multiply plus additive pass), HUD, `snapshot()` for tests.
-- `src/ent/`: `player.js` (David, physics constants in `PHYS` and `SLING`), `stone.js`, `soldier.js` (marked and unmarked spearman), `trophy.js`.
-- `src/gfx/`: `bg.js` (sky and parallax ridges, one entry per theme in `THEMES`), `tiles.js` (pre-rendered tile layer, one palette per theme), `chars.js` (rig-drawn pixel characters, the ring, props).
-- `src/world/room.js` (map parsing, tile collision), `src/world/reach.js` (reachability model).
-- `src/data/`: `verses.js`, `powers.js`, `regions.js`, `r1.js`.
+- `index.html`: one 480x270 canvas scaled by whole multiples with nearest-neighbor, plus `#ui` for DOM overlays (cards, debug menu). Card styles live here; `--s` is the integer scale.
+- `src/main.js`: boot, fixed 60 Hz step, `window.__ift` hook. `?test=1` stops the live loop so scripts step it (`__ift.step(n, ['right','jump'])`); `?nosave=1` disables localStorage; `?at=1/outskirts` starts in that room.
+- `src/game.js`: play state. `loadRoom(region, room, link)`, entity lists, links (`checkLinks`, `useDoor`, `go`), gates (`breakGate`), the captain flow (`onBossFell` -> verse card -> `spawnRelic` -> `grantPower` -> power card), camera, light map, HUD, `snapshot()` for tests. `game.godmode` stops all damage (debug menu and tests that say so).
+- `src/ui.js`: DOM cards. `ui.verse(region)`, `ui.power(id)`, `ui.scene(kind, pages, buttons, onClose)`. While a card is open the simulation is paused and Enter, jump, or a click dismisses it. The card element is `#card` with `data-kind`.
+- `src/ent/`: `player.js` (David; `PHYS`, `DASH`, `SLING`), `stone.js` (carries `tags` such as `full`, read by captains for the weakness chain), `soldier.js`, `trophy.js`, `boss.js` (`Boss`, driven by a config; `Shot`, every hostile missile and ground wave).
+- `src/gfx/`: `bg.js` (one entry per theme in `THEMES`), `tiles.js` (pre-rendered tile layer and cave backing; one palette per theme in `PAL`), `chars.js` (rig-drawn David, soldier, captain, Israelite; the ring; props), `props.js` (gate tiles, water, doorways, camp props, the relic).
+- `src/world/`: `room.js` (tile kinds, map parsing, collision), `build.js` (`RB`, the room builder; `parseTo`), `reach.js` (the two reachability models and the world flood).
+- `src/data/`: `verses.js`, `powers.js`, `bosses.js` (captain configs), `regions.js` (index; region 0 is the hub), `hub.js`, `r1.js`.
 - `src/audio.js` (Web Audio synth), `src/input.js` (keyboard and gamepad), `src/font.js` (3x5 pixel font, capitals only), `src/save.js`, `src/debug.js`.
-- `tests/`: `verses.test.mjs`, `reach.test.mjs`, `serve.mjs`, `play/helpers.cjs` (harness and `window.bot`), `play/m1.cjs`.
-- `tools/meter.py`, `tools/roomgen.py` (build a room from rectangles, print ASCII rows to paste into a region file).
+- `tests/`: `verses.test.mjs`, `reach.test.mjs`, `serve.mjs`, `play/helpers.cjs` (harness, `window.bot` with `walkTo`, `fight`, `fightBoss`, and `overview`), `play/m1.cjs`, `play/m2.cjs`, `play/look.cjs`.
+- `tools/meter.py`. (`tools/roomgen.py` is superseded by `src/world/build.js` and kept only as the record of how the first room was made.)
 
 ## Level format
 
-A region is `{ id, name, theme, complete, start, rooms: [{ id, name, map: [rows] }] }` in `src/data/rN.js`, listed in `src/data/regions.js`. Tiles are 16 px; the screen shows 30 x 17 tiles.
+A region is `{ id, name, theme, complete, start, rooms }` in `src/data/rN.js`, listed in `src/data/regions.js`. Rooms are built in code with `RB` (`src/world/build.js`): rectangle fills, `land(x0, x1, top)` for ground down to the room's bottom, `plank`, `cave` (hollow with dark backing), `put`/`puts` for spawns, `exit(side, id, standingRow, to)` for edge exits, `door(id, cx, standingRow, to, opts)` for doorways entered with Up, `prop`, and `gate(power, cx, cy)` to declare a geometry gate. `done()` yields the ASCII map plus links, props, gates, and backing rectangles. Tiles are 16 px; the screen shows 30 x 17. A "standing row" is the row of the cell a body stands in.
 
 | Char | Meaning |
 |------|---------|
 | `#` | solid ground |
 | `=` | one-way plank (jump up through, down + jump drops through) |
 | `^` | stakes (hurt David, kill soldiers, bounce trophies home) |
-| `.` | air |
-| `P` | room start |
-| `M` | marked soldier (ids are `region.room.index` in scan order; changing a map renumbers them, which only matters to old saves) |
-| `s` | unmarked soldier |
-| `t` | torch |
+| `1` | reed screen: solid until dashed through (Fleet Foot) |
+| `4` | cracked slab: solid until pounded (Lion's Fall) |
+| `5` | thorn hedge: solid until cut (Goliath's Sword) |
+| `6` | spear hedge: solid unless David carries the Bronze Buckler |
+| `9` | bound door: solid until struck by a full-charge Smooth Stone |
+| `~` | deep water: sweeps David back to the bank without Deep Breath |
+| `o` | bronze ring for the Shepherd's Cord |
+| `P` | default start; `t` torch; `B` captain |
+| `M` `A` `H` | marked spearman, archer, heavy (ids are `region.room.index` in scan order) |
+| `s` `a` `h` `l` | ordinary spearman, archer, heavy, lion (archer, heavy, lion arrive in milestone 3) |
 
-Still to define in milestone 2: exits between rooms, checkpoints, gate tiles (one character per power), the boss arena, hub doors.
+Links: `to` is `'region/room/link'` or `'room/link'` inside the region. Options: `needs` (power id), `after` (hidden until that region's captain has fallen), `look` (`gateway`, `saul`, `arena`, `path`), `label`, `act`. A room with `boss: N` holds captain N at its `B` cell. Opened gate tiles are saved in `save.gates` and stay open.
+
+How gating works in play, so far: reed screens (dash) and deep water (swim hazard) behave fully; cracked slabs, thorns, bound doors, and spear hedges are solid and wait for their powers in milestones 3 and 4; rings are inert until the cord exists.
 
 ## Reachability model
 
-`src/world/reach.js` floods the standable cells of a room from its start, using a movement model weaker than the real physics: jump 3 tiles up and 4 across (3 across at full height); the game allows about 3.7 up and 5.4 across. David is treated as two tiles tall. Stakes are impassable. Planks can be dropped through. So "reachable" in the test implies reachable in play, and the playthrough scripts confirm samples of it by actually playing.
+`src/world/reach.js` floods standable cells across the whole world from the hub, room to room through links, for a given power set. Two models:
 
-Plan for gates and powers: each gate is a tile character that is impassable unless the power set contains its power; each movement power widens the model (dash: wider gaps; double jump: 6 up; climb: unlimited rise along a wall; and so on). The test then runs the flood once per power set: powers through region 5, and all powers. Rooms connect through exits, so the flood must cross rooms and the hub. `tests/reach.test.mjs` already enforces 20 marked soldiers for any region flagged `complete`, and refuses to pass once all ten are complete until the power-set checks exist.
+- **Conservative** (proves trophies reachable): weaker than play in every respect. Base jump 3 tiles up and 4 across (play: about 3.7 and 5.4, more with coyote time and ledge overhang). Double jump: 6 up, 6 across (play: about 6.9 up). Dash: +1 across (play: +3). Climb: unlimited rise along a wall. Swim: free movement in water, jump 2 out. Cord: rings within 5 cells with a clear line (play: about 6.9). Stakes are impassable. David is two tiles tall.
+- **Optimistic** (proves gates hold): stronger than play in every respect. Base 4 up and 9 across; double 8 up and 16 across; dash +6; walks through stakes; cord 9 cells with no line-of-sight test.
+
+Gate tiles are impassable in both models without their power. Because the optimistic model is so generous sideways, **never gate anything by horizontal distance**. Geometry gates are vertical only: a double-jump ledge is exactly 5 or 6 tiles above the nearest footing, and a climb wall at least 9. Declare each with `gate(power, cx, cy)`.
+
+`tests/reach.test.mjs` checks, on every run: maps parse; every link leads somewhere real and can be reached; complete regions hold exactly 20 marked soldiers; every marked soldier is reachable with all powers (conservative); every gate tile maps to a real power and can be reached to be opened; every declared gate is unreachable with only the powers earned before its own (optimistic) and reachable with all; every captain's room can be entered with only the powers of earlier regions. It prints, per region, the first power with which each soldier becomes reachable. Once all ten regions are complete it also requires exactly 200 trophies, at least 100 proven reachable with the powers of regions 1-5, and fewer than 200 reachable with those powers even optimistically.
 
 ## Design plan (standing; later runs may revise and must log changes under Decisions)
 
@@ -168,6 +183,18 @@ One line per choice, newest last.
 - 2026-11-17: The reachability test reports the final 200-trophy checks as PENDING until all ten regions are flagged complete, and enforces everything it can on the regions that exist. Region 1 is flagged incomplete with 6 marked soldiers.
 - 2026-11-17: Verse cards and scenes will be DOM overlays in `#ui` (crisp serif text, and tests can read the exact text back).
 - 2026-11-17: Power set and order as in the Design plan table. Ashkelon gets `swim` and Gaza gets `heavy`.
+
+- 2026-11-18: The world is the hub (region 0) plus ten regions. Rooms join by edge exits (walk off the side) and doorways (press Up). A new game starts in the camp.
+- 2026-11-18: Rooms are built in code by `RB` rather than stored as typed ASCII; the map string is still what the parser and tests read.
+- 2026-11-18: Region 1 is four rooms: Valley of Elah (6 marked), The Brook (7), The Picket Line (7), Shalmek's Ground (captain). 14 need no power; one each needs dash, double jump, climb, swim, heavy stone, shield.
+- 2026-11-18: Gateway N in the camp needs the power from region N-1. A gateway whose region is not built yet reads "sealed".
+- 2026-11-18: Each fallen captain adds one health pip (5 at the start, 15 at the end).
+- 2026-11-18: Captain flow: he dissolves, the verse card shows, the player dismisses it, the relic drops in the middle of the arena, taking it grants the power and shows a card with the controls, and a door back to camp appears. If the game is closed between the card and the pickup, the relic waits in the arena.
+- 2026-11-18: David dying, or re-entering a room, puts unmarked soldiers back and restarts a captain's fight. He returns to the link he entered by, at full health.
+- 2026-11-18: A trophy that comes to rest more than 200 px along or 40 px above or below its soldier's post, or touches water David cannot swim, hops back to the post. This closes the "trophy stuck on a ledge" bug from run 1.
+- 2026-11-18: Soldiers need a clear line to see or strike David, so nothing attacks through a gate, and they do not walk out through edge exits.
+- 2026-11-18: Shalmek has 60 health, a frontal shield against light stones, and three attacks (spear lunge, leap with ground waves, a three-javelin volley below half health). Full-charge stones count as his weakness (double damage, a stagger at most every 4 seconds). The scripted bot beats him on foot without help, ending on 1 health of 5.
+- 2026-11-18: Text in Saul's tent is plain narration, not scripture, so nothing outside BRIEF.md's verses is quoted.
 
 ## Liberties taken with the text
 

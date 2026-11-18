@@ -2,10 +2,23 @@
 import { T } from '../core.js';
 
 export const AIR = 0, SOLID = 1, ONEWAY = 2, SPIKE = 3;
+// Gate tiles. Each belongs to one power (GATE_POWER). The barrier kinds are solid until David,
+// holding that power, opens them; water and rings are not solid but are useless without theirs.
+export const REED = 4, CRACK = 5, THORN = 6, HEDGE = 7, BOUND = 8, WATER = 9, RING = 10;
+export const GATE_POWER = { [REED]: 'dash', [CRACK]: 'pound', [THORN]: 'sword', [HEDGE]: 'shield', [BOUND]: 'heavy', [WATER]: 'swim', [RING]: 'grapple' };
+export const GATE_NAME = { [REED]: 'reed screen', [CRACK]: 'cracked slab', [THORN]: 'thorn hedge', [HEDGE]: 'spear hedge', [BOUND]: 'bound door', [WATER]: 'deep water', [RING]: 'bronze ring' };
+export const isBarrier = (t) => t >= REED && t <= BOUND;
 
 // Map legend (see NOTES.md, "Level format").
-const TILE_CHARS = { '#': SOLID, '=': ONEWAY, '^': SPIKE };
-const SPAWN_CHARS = { P: 'start', M: 'marked', s: 'soldier', t: 'torch' };
+const TILE_CHARS = { '#': SOLID, '=': ONEWAY, '^': SPIKE, '1': REED, '4': CRACK, '5': THORN, '6': HEDGE, '9': BOUND, '~': WATER, 'o': RING };
+// kind: soldier type. Capital letters are marked soldiers, small letters ordinary ones.
+const SPAWN_CHARS = {
+  P: { type: 'start' }, t: { type: 'torch' }, B: { type: 'boss' },
+  M: { type: 'marked', kind: 'spear' }, s: { type: 'soldier', kind: 'spear' },
+  A: { type: 'marked', kind: 'archer' }, a: { type: 'soldier', kind: 'archer' },
+  H: { type: 'marked', kind: 'heavy' }, h: { type: 'soldier', kind: 'heavy' },
+  l: { type: 'soldier', kind: 'lion' },
+};
 
 export function parseRoom(def, regionId) {
   const h = def.map.length;
@@ -21,24 +34,31 @@ export function parseRoom(def, regionId) {
       const ch = row[x] || '.';
       if (TILE_CHARS[ch]) { tiles[y * w + x] = TILE_CHARS[ch]; continue; }
       if (ch === '.' || ch === ' ') continue;
-      const type = SPAWN_CHARS[ch];
-      if (!type) { problems.push(`unknown map char '${ch}' at ${x},${y}`); continue; }
-      const sp = { type, cx: x, cy: y };
-      if (type === 'start') start = sp;
-      if (type === 'marked') sp.id = `${regionId}.${def.id}.${markedN++}`;
+      const d = SPAWN_CHARS[ch];
+      if (!d) { problems.push(`unknown map char '${ch}' at ${x},${y}`); continue; }
+      const sp = { type: d.type, kind: d.kind, cx: x, cy: y };
+      if (d.type === 'start') start = sp;
+      if (d.type === 'marked') sp.id = `${regionId}.${def.id}.${markedN++}`;
       spawns.push(sp);
     }
   }
+  const links = (def.links || []).map((l) => ({ ...l }));
   const room = {
-    id: def.id, regionId, name: def.name || '', w, h, tiles, spawns, start, problems,
+    id: def.id, regionId, name: def.name || '', w, h, tiles, spawns, start, problems, links,
+    props: def.props || [], gates: def.gates || [], backs: def.backs || [], boss: def.boss || null, def,
+    shield: false,                 // set by the game when David carries the buckler: spear hedges part for him
+    // Beyond the side edges the edge column repeats, so the floor of an edge exit carries on off-screen.
     tile(cx, cy) {
-      if (cx < 0 || cx >= w) return SOLID;
       if (cy < 0 || cy >= h) return AIR;
+      if (cx < 0) cx = 0; else if (cx >= w) cx = w - 1;
       return tiles[cy * w + cx];
     },
-    solid(cx, cy) { return this.tile(cx, cy) === SOLID; },
+    set(cx, cy, t) { if (cx >= 0 && cx < w && cy >= 0 && cy < h) tiles[cy * w + cx] = t; },
+    solid(cx, cy) { const t = this.tile(cx, cy); return t === SOLID || (t >= REED && t <= BOUND && !(t === HEDGE && this.shield)); },
     tileAt(px, py) { return this.tile(Math.floor(px / T), Math.floor(py / T)); },
+    link(id) { return links.find((l) => l.id === id); },
   };
+  if (!start && links.length) start = room.start = { type: 'start', cx: links[0].kind === 'edge' ? (links[0].side === 'L' ? 1 : w - 2) : links[0].cx, cy: links[0].cy };
   return room;
 }
 
@@ -65,7 +85,7 @@ export function moveBody(room, b, dt, res) {
     const cy = Math.floor((ny + b.h - 0.01) / T);
     for (let x = x0; x <= x1; x++) {
       const t = room.tile(x, cy);
-      if (t === SOLID || (t === ONEWAY && !(b.drop > 0) && prevBottom <= cy * T + 0.01)) {
+      if (room.solid(x, cy) || (t === ONEWAY && !(b.drop > 0) && prevBottom <= cy * T + 0.01)) {
         ny = cy * T - b.h; res.hy = 1; break;
       }
     }

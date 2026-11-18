@@ -105,6 +105,7 @@ const { launch, checker } = require('./helpers.cjs');
 
   console.log('damage does not cost trophies');
   const hurt = await ev(() => {
+    __ift.game.loadRoom(1, 'outskirts');                     // re-enter the room: unmarked soldiers are back at their posts
     const g = __ift.game, p = g.player; let n = 0;
     const sol = g.soldiers.find((x) => !x.marked);           // the unmarked soldier on the plateau
     bot.walkTo(sol.x - 60);
@@ -161,7 +162,7 @@ const { launch, checker } = require('./helpers.cjs');
 
   // Real-time pass: real keyboard events through the normal loop, plus a frame-rate reading.
   console.log('real-time input and frame rate');
-  const r = await launch({ query: 'nosave=1' });
+  const r = await launch({ query: 'nosave=1&at=1/outskirts' });
   await r.page.waitForTimeout(700);
   const x0 = (await r.ev(() => __ift.state())).player.x;
   await r.page.keyboard.down('ArrowRight'); await r.page.waitForTimeout(600); await r.page.keyboard.up('ArrowRight');

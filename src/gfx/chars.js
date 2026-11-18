@@ -1,7 +1,7 @@
 // Procedural pixel-art characters. Each figure is posed and drawn live from a small rig into a
 // 64x64 scratch canvas (origin at the feet), then stamped into the world with a dark outline so
 // silhouettes stay readable against the painted backdrop.
-const SZ = 64, OX = 32, OY = 50;
+const SZ = 96, OX = 48, OY = 78;
 const OUTLINE = '#0e0a12';
 let SC, sc, SIL, sil;
 
@@ -177,6 +177,110 @@ function poseSoldier(p) {
 // p: { face, moving, walk, state, t, marked }
 export function drawSoldier(ctx, x, y, p, flash) { poseSoldier(p); stamp(ctx, x, y, flash); }
 export function drawSoldierLight(ctx, x, y, p, squash, alpha) { poseSoldier(p); stampLight(ctx, x, y, squash, alpha); }
+
+// ---------------------------------------------------------------- Philistine captain
+// A taller, heavier figure than the rank and file: cape, broad corselet, a great feathered crest.
+// p: { face, look, state, attack: { id }, t, walk, moving, onGround, weakT }
+function weaponLine(st, atk, kind, by) {
+  const long = kind === 'spear';
+  if (st === 'stagger') return [-7, -8, -12, long ? -44 : -30];
+  if (st === 'recover') return long ? [0, -22 + by, 22, -5] : [4, -16 + by, 16, -4];
+  if (st === 'intro') return long ? [8, -6, 8, -52] : [7, -24, 9, -46];
+  if (st === 'tele') {
+    if (atk === 'thrust' || atk === 'charge') return long ? [-20, -24 + by, 8, -27 + by] : [-12, -22 + by, 2, -26 + by];
+    if (atk === 'volley' || atk === 'rain' || atk === 'summon') return long ? [-12, -46, 12, -38] : [2, -30, 4, -50];
+    if (atk === 'leap') return long ? [-6, -12, 14, -30] : [2, -16, 14, -22];
+    return long ? [-10, -40, 4, -48] : [-6, -34, -14, -48];            // sweep: drawn back overhead
+  }
+  if (st === 'act') {
+    if (atk === 'thrust' || atk === 'charge') return long ? [-2, -24, 32, -24] : [4, -24, 24, -24];
+    if (atk === 'leap') return long ? [2, -40, 12, -8] : [4, -34, 10, -14];
+    if (atk === 'sweep') return long ? [4, -22, 30, -10] : [6, -22, 24, -12];
+    return long ? [6, -24, 16, -44] : [6, -24, 12, -40];
+  }
+  return long ? [-9, -16 + by, 15, -26 + by] : [6, -18 + by, 13, -34 + by];
+}
+function poseCaptain(p) {
+  begin(p.face);
+  const L = p.look, st = p.state, atk = p.attack ? p.attack.id : '', moving = p.moving;
+  const s = Math.sin(p.walk), c = Math.cos(p.walk), air = !p.onGround;
+  const crouch = (st === 'tele' && atk === 'leap') ? 4 : st === 'recover' ? 3 : st === 'stagger' ? 2 : 0;
+  const lunge = st === 'act' && (atk === 'thrust' || atk === 'charge' || atk === 'sweep');
+  const lean = st === 'tele' && (atk === 'thrust' || atk === 'charge') ? -3 : lunge ? 4 : st === 'stagger' ? -3 : st === 'recover' ? 2 : 0;
+  const by = crouch + (moving && Math.abs(c) > 0.6 ? 1 : 0);
+  let a = [3, 0], b = [-3, 0];
+  if (air) { a = [5, 5]; b = [-3, 2]; }
+  else if (moving) { a = [Math.round(s * 4), Math.round(Math.max(0, c) * 2)]; b = [Math.round(-s * 4), Math.round(Math.max(0, -c) * 2)]; }
+  else if (lunge) { a = [7, 0]; b = [-6, 0]; }
+  const hip = -14 + by, ty = -30 + by, tx = -5 + lean;
+  const wl = weaponLine(st, atk, L.weapon, by);
+  const weapon = () => {
+    const [x0, y0, x1, y1] = wl, hot = st === 'tele' && Math.sin(p.t * 40) > 0;
+    if (L.weapon === 'spear') {
+      Ln(x0, y0, x1, y1, S.shaft, 2);
+      const mx = x0 + (x1 - x0) * 0.8, my = y0 + (y1 - y0) * 0.8;
+      Ln(mx, my, x1, y1, hot ? '#ffffff' : L.bronzeH, 2); Ln(mx, my + 1, x1, y1 + 1, L.bronze, 1);
+    } else if (L.weapon === 'axe' || L.weapon === 'mace') {
+      Ln(x0, y0, x1, y1, S.shaft, 2);
+      R(x1 - 3, y1 - 3, 7, 6, hot ? '#ffffff' : L.bronze); R(x1 - 3, y1 - 3, 7, 1, L.bronzeH); R(x1 - 3, y1 + 2, 7, 1, L.bronzeD);
+      if (L.weapon === 'axe') R(x1 + 3, y1 - 5, 2, 10, L.bronzeH);
+    } else {                                                             // sword
+      Ln(x0, y0, x1, y1, hot ? '#ffffff' : '#d9dbe6', 2); Ln(x0, y0 + 1, x1, y1 + 1, '#8c90a6', 1);
+      R(x0 - 2, y0 - 1, 5, 2, L.bronzeH);
+    }
+  };
+  // Cape
+  const flap = Math.sin(p.t * 6) > 0 ? 1 : 0;
+  for (let i = 0; i < 18; i++) R(tx - 3 - (i > 9 ? 1 + flap : 0) - (moving || lunge ? Math.floor(i / 6) : 0), ty + 1 + i, 5, 1, i % 6 === 5 ? '#000000' : L.cape);
+  if (st === 'stagger' || st === 'idle' || st === 'intro') weapon();
+  // Legs with greaves
+  Ln(-2, hip, b[0], -3 - b[1], S.skinD, 3); R(b[0] - 1, -7 - b[1], 4, 6, L.bronzeD); R(b[0] - 1, -1 - b[1], 5, 1, S.boot);
+  Ln(2, hip, a[0], -3 - a[1], S.skin, 3); R(a[0] - 1, -7 - a[1], 4, 6, L.bronze); R(a[0], -7 - a[1], 1, 6, L.bronzeH); R(a[0] - 1, -1 - a[1], 5, 1, S.boot);
+  // Kilt
+  R(-6, hip - 5, 12, 6, L.kilt); R(-5, hip + 1, 10, 1, L.kilt); R(-2, hip + 2, 5, 1, L.kilt); R(0, hip + 3, 1, 2, L.band);
+  R(-6, hip - 5, 3, 6, L.kiltD); R(-6, hip - 2, 12, 1, L.band);
+  // Corselet
+  R(tx, ty, 11, 12, L.bronze);
+  for (let r = 2; r < 12; r += 3) R(tx, ty + r, 11, 1, L.bronzeD);
+  R(tx, ty, 3, 12, L.bronzeD);
+  for (let r = 0; r < 12; r += 3) R(tx + 8, ty + r, 2, 1, L.bronzeH);
+  R(tx - 1, ty - 1, 4, 3, L.bronzeH); R(tx + 8, ty - 1, 4, 3, L.bronzeH); R(tx - 1, ty + 1, 4, 1, L.bronzeD); R(tx + 8, ty + 1, 4, 1, L.bronzeD);
+  // Head, beard, helmet, crest
+  const hx = tx + 2, hy = ty - 8;
+  R(hx, hy, 7, 7, S.skin); R(hx, hy, 2, 7, S.skinD); R(hx + 5, hy + 3, 1, 1, S.eye); R(hx + 3, hy + 2, 3, 1, S.skinD);
+  R(hx + 2, hy + 5, 5, 3, L.beard); R(hx + 6, hy + 4, 1, 2, L.beard);
+  R(hx - 1, hy - 1, 9, 2, L.bronze); R(hx + 5, hy - 1, 2, 1, L.bronzeH); R(hx - 1, hy + 1, 2, 4, L.bronzeD);
+  const hts = [4, 6, 8, 9, 10, 10, 9, 8, 6, 5];
+  for (let i = 0; i < 10; i++) {
+    const fx = hx - 2 + i + (i === 9 ? 1 : 0), sway = (moving || lunge) && i < 4 ? -1 : 0;
+    R(fx + sway, hy - 1 - hts[i], 1, hts[i], i % 2 ? L.plume[0] : '#000000');
+    R(fx + sway, hy - 1 - hts[i], 1, hts[i] - 1, i % 2 ? L.plume[0] : L.plume[1]);
+    R(fx + sway, hy - 1 - hts[i], 1, 2, L.plume[1]);
+  }
+  if (!(st === 'stagger' || st === 'idle' || st === 'intro')) weapon();
+  if (L.shield) {
+    const sx = (st === 'tele' ? 0 : lunge ? -3 : 3) + lean, sy = ty + 1 + (st === 'recover' ? 4 : 0);
+    R(sx + 1, sy, 8, 12, L.bronze); R(sx, sy + 1, 10, 10, L.bronze);
+    R(sx + 1, sy, 8, 1, L.bronzeD); R(sx, sy + 1, 1, 10, L.bronzeD); R(sx + 1, sy + 11, 8, 1, L.bronzeD); R(sx + 9, sy + 1, 1, 10, L.bronzeD);
+    R(sx + 4, sy + 4, 3, 3, L.bronzeH); R(sx + 2, sy + 2, 2, 1, L.bronzeH); R(sx + 4, sy + 1, 2, 10, L.plume[0]); R(sx + 4, sy + 4, 3, 3, L.bronzeH);
+  }
+}
+export function drawCaptain(ctx, x, y, p, flash) { poseCaptain(p); stamp(ctx, x, y, flash); }
+export function drawCaptainLight(ctx, x, y, p, squash, alpha) { poseCaptain(p); stampLight(ctx, x, y, squash, alpha); }
+
+// ---------------------------------------------------------------- Israelite soldier (camp)
+const I = { skin: '#d9a073', skinD: '#a86f4a', tunic: '#8fa3b8', tunicD: '#5d6f86', cap: '#6d4628', belt: '#3a2a22', shaft: '#6a4a34', tip: '#cfd3de' };
+export function drawIsraelite(ctx, x, y, face, t, seed = 0) {
+  begin(face);
+  const by = Math.sin(t * 2 + seed) > 0.6 ? 1 : 0;
+  Ln(-3, -3, -2, -30, I.shaft); R(-3, -33, 3, 4, I.tip);
+  Ln(-1, -9, -2, -2, I.skinD, 2); R(-2, -1, 3, 1, I.belt); Ln(1, -9, 2, -2, I.skin, 2); R(2, -1, 3, 1, I.belt);
+  R(-4, -19 + by, 8, 11, I.tunic); R(-4, -19 + by, 2, 11, I.tunicD); R(-4, -13 + by, 8, 1, I.belt); R(-4, -9 + by, 8, 1, I.tunicD);
+  R(-3, -25 + by, 6, 6, I.skin); R(-3, -25 + by, 2, 6, I.skinD); R(1, -22 + by, 1, 1, S.eye); R(0, -20 + by, 3, 1, I.skinD);
+  R(-4, -27 + by, 8, 3, I.cap); R(-4, -25 + by, 1, 3, I.cap);
+  R(2, -17 + by, 5, 7, '#7a5a3a'); R(2, -17 + by, 5, 1, '#a07a4e'); R(4, -14 + by, 1, 1, '#d9b85e');
+  stamp(ctx, x, y, false);
+}
 
 // ---------------------------------------------------------------- trophy: a pale curled ring
 const RING = [

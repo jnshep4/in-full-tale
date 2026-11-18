@@ -3,7 +3,8 @@ import { overlap } from '../core.js';
 import { SLING } from './player.js';
 
 export class Stone {
-  constructor(x, y, vx, vy, charge) {
+  constructor(x, y, vx, vy, charge, tags = []) {
+    this.tags = tags;
     this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.charge = charge;
     this.dmg = charge >= 1 ? 3 : charge >= 0.5 ? 2 : 1;
     this.life = 3; this.dead = false; this.px = x; this.py = y;
@@ -20,6 +21,10 @@ export class Stone {
       return;
     }
     const box = { x: this.x - 3, y: this.y - 3, w: 6, h: 6 };
+    if (g.boss && g.boss.state !== 'dying' && overlap(box, g.boss)) {
+      g.boss.hit(g, this.dmg, Math.sign(this.vx) || 1, { charge: this.charge, tags: this.tags });
+      this.dead = true; return;
+    }
     for (const s of g.soldiers) {
       if (s.state === 'dying' || !overlap(box, s)) continue;
       s.hit(g, this.dmg, Math.sign(this.vx) || 1, this.charge);

@@ -51,6 +51,21 @@ export function renderRoom(room, theme) {
       d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
     }
   }
+  // Backing for hollow interiors: dark dressed rock, so caves and huts are not open to the sky.
+  for (const [bx0, by0, bx1, by1] of room.backs || []) {
+    for (let cy = by0; cy <= by1; cy++) for (let cx = bx0; cx <= bx1; cx++) {
+      if (room.tile(cx, cy) === SOLID) continue;
+      for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
+        const X = cx * T + px, Y = cy * T + py, n = hash2(X, Y, 71);
+        const v = fbm(X * 0.05, Y * 0.12, 72, 2);
+        let col = mix3(edge, rock[0], 0.35 + v * 0.5);
+        if ((Y + ((X >> 4) & 1) * 5) % 9 === 0 && n > 0.3) col = mix3(col, edge, 0.5);
+        if (n > 0.985) col = rock[1];
+        const i = (Y * c.width + X) * 4;
+        d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
+      }
+    }
+  }
   g.putImageData(img, 0, 0);
 
   for (let cy = 0; cy < room.h; cy++) for (let cx = 0; cx < room.w; cx++) {

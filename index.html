@@ -12,6 +12,23 @@
   canvas { display: block; image-rendering: crisp-edges; image-rendering: pixelated; }
   #ui { position: absolute; inset: 0; pointer-events: none; font-family: Georgia, 'Times New Roman', serif; color: #f1e2c0; }
   #ui > * { pointer-events: auto; }
+  #ui { font-size: calc(var(--s, 2) * 5.2px); }
+  .card { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(7, 5, 11, 0.72); }
+  .card-in { width: 74%; max-height: 88%; box-sizing: border-box; padding: 2.2em 2.6em 1.4em; text-align: center; background: linear-gradient(#1b1320, #120d18);
+    border: 1px solid #c98b3f; outline: 1px solid #3a2a20; outline-offset: 3px; box-shadow: 0 0 4em rgba(255, 170, 80, 0.16); }
+  .card .orn { height: 1px; width: 40%; margin: 0 auto 1.4em; background: linear-gradient(90deg, transparent, #ffd680, transparent); }
+  .card p { margin: 0 0 0.8em; line-height: 1.45; }
+  .card .verse-text { font-size: 1.5em; font-style: italic; color: #f6ead0; }
+  .card .verse-text.small { font-size: 1.3em; }
+  .card .verse-ref { font-size: 1.05em; letter-spacing: 0.12em; text-transform: uppercase; color: #ffd680; }
+  .card h2 { margin: 0 0 0.5em; font-size: 2em; font-weight: normal; letter-spacing: 0.08em; color: #ffd680; }
+  .card .kicker { font-size: 1em; letter-spacing: 0.2em; text-transform: uppercase; color: #c98b3f; margin-bottom: 0.4em; }
+  .card .blurb { font-size: 1.3em; } .card .how { font-size: 1.1em; color: #cdbf9d; }
+  .card .say { font-size: 1.3em; } .card .end { font-size: 1.15em; letter-spacing: 0.2em; text-transform: uppercase; color: #c98b3f; }
+  .card-buttons { display: flex; gap: 1.2em; justify-content: center; margin-top: 1.2em; }
+  .card button { font: inherit; font-size: 1.1em; letter-spacing: 0.1em; padding: 0.35em 1.2em; cursor: pointer; background: #1c1524; color: #f1e2c0; border: 1px solid #86522a; }
+  .card button.sel { border-color: #ffd680; color: #ffd680; box-shadow: 0 0 0.8em rgba(255, 214, 128, 0.35); }
+  .card .card-hint { margin: 0.9em 0 0; font-size: 0.85em; letter-spacing: 0.14em; text-transform: uppercase; color: #7d6f66; }
   #debug { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); width: min(92%, 460px); box-sizing: border-box;
     background: rgba(14, 10, 18, 0.94); border: 1px solid #c98b3f; padding: 12px 16px; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; }
   #debug h2 { margin: 0 0 6px; font-size: 14px; color: #ffd680; letter-spacing: 0.1em; text-transform: uppercase; }

@@ -1,7 +1,7 @@
 // Philistine spearman. Marked soldiers (crimson crest, glowing ring overhead) each carry one of
 // the 200 trophies and never respawn. Unmarked soldiers respawn and can only drop a fig.
 import { T, approach, overlap } from '../core.js';
-import { moveBody, touches, SPIKE, AIR } from '../world/room.js';
+import { moveBody, touches, SPIKE, SOLID, ONEWAY, WATER, isBarrier } from '../world/room.js';
 import { drawSoldier, drawSoldierLight } from '../gfx/chars.js';
 
 const WALK = 28, CHASE = 64, SIGHT = 124, REACH = 36;
@@ -21,7 +21,9 @@ export class Soldier {
 
   floorAhead(room, dir) {
     const fx = dir > 0 ? this.x + this.w + 3 : this.x - 3;
-    return room.tileAt(fx, this.y + this.h + 3) !== AIR && room.tileAt(fx, this.y + this.h - 3) !== SPIKE;
+    if (fx < 20 || fx > room.w * T - 20) return false;          // soldiers do not leave by the room's edge exits
+    const below = room.tileAt(fx, this.y + this.h + 3), at = room.tileAt(fx, this.y + this.h - 3);
+    return (below === SOLID || below === ONEWAY || isBarrier(below)) && at !== SPIKE && at !== WATER;
   }
 
   update(g, dt) {
@@ -34,7 +36,10 @@ export class Soldier {
       return;
     }
     const dx = p.cx - this.cx, dy = (p.y + p.h) - (this.y + this.h), adx = Math.abs(dx);
-    const sees = !p.dead && adx < SIGHT && Math.abs(dy) < 40 && (Math.sign(dx) === this.face || adx < 44);
+    let sees = !p.dead && adx < SIGHT && Math.abs(dy) < 40 && (Math.sign(dx) === this.face || adx < 44);
+    // Walls, doors and hedges block both his sight and his spear.
+    if (sees || this.state !== 'patrol') { this.wall = false; for (let x = Math.min(p.cx, this.cx); x <= Math.max(p.cx, this.cx); x += 8) if (room.solid(Math.floor(x / T), Math.floor((this.y + 8) / T))) { this.wall = true; break; } }
+    if (this.wall) { sees = false; if (this.state === 'chase' || this.state === 'alert' || this.state === 'windup') { this.state = 'patrol'; this.lost = 0; } }
     switch (this.state) {
       case 'patrol':
         this.vx = this.face * WALK;
@@ -59,7 +64,7 @@ export class Soldier {
         this.vx = approach(this.vx, 0, 700 * dt);
         if (!this.floorAhead(room, this.face)) this.vx = 0;
         const tip = { x: this.face > 0 ? this.x + this.w : this.x - 20, y: this.y + 5, w: 20, h: 8 };
-        if (!this.struck && overlap(tip, p)) { this.struck = p.hurt(g, 1, this.face) || this.struck; }
+        if (!this.struck && !this.wall && overlap(tip, p)) { this.struck = p.hurt(g, 1, this.face) || this.struck; }
         this.t -= dt; if (this.t <= 0) { this.state = 'recover'; this.t = 0.55; }
         break;
       }
