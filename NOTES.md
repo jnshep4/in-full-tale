@@ -32,6 +32,17 @@ James then asked to move to the next stage. All five milestones being done, the 
 
 Meter at this point: 9,814,982 units. The whole suite passes: 212 playthrough checks, the verse test, the reach test.
 
+## After the summary, continued: the "remaining ideas" (2026-11-18)
+
+James asked to start on the remaining ideas from the final summary. Done so far, all pushed:
+- **Map screen.** The pause sheet has a Map button. It shows one region at a time, rooms side by side in walking order; rooms not yet entered are blank (`save.seen`). Red marks are soldiers still carrying a ring, coloured blocks are gates (dim until the power is held), green is a door, white is David. "Earlier" and "Later" step through the regions visited.
+- **Music.** A four-bar bass progression, an answering second voice on the repeat, a held reed under the tune, and a lead that is a lyre, a reed pipe or a flute depending on the region. Still generated in `src/audio.js`.
+- **Hand-built rooms.** Regions 5, 6, 8, 9 and 10 are now built by hand with `RB`, like region 1, using the set pieces only for their gated secrets: trenches and a plank watchtower (5), two-storey houses and a sunken press yard (6), piers over deep water and a ship with a ring in her rigging (8), twin gate towers with a walk between and a seven-deep cistern (9), a stair of terraces and a fourteen-high fortress wall (10). Each kept its 20 soldiers and its gate plan, and the reach test passed unchanged.
+
+**Still to do if wanted:** regions 2, 3, 4 and 7 are still segment-built (with decks, variation and scenery). `tests/play/m3.cjs` and `m4.cjs` place David at fixed cells in region 2 (vineyard tower 71,23; cellar 84,25; watchtower 41,29; presses perch 31,27 and its heavy), region 3 (descent thorn hut 43,31), region 4 (thicket lions) and region 7 (quarter archer), so rebuilding those rooms means moving those test coordinates too.
+
+Meter at this point: 10,761,823 units of the 17,010,000 stop line. Whole suite green: 215 playthrough checks, verse test, reach test.
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
@@ -78,6 +89,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | milestone 4 (read just before committing) | 6,727,700 |
 | 2 | milestone 5 and final summary (read just before committing) | 7,734,097 |
 | 2 | after James's playtest: level sling, rings, decks (read just before committing) | 9,814,982 |
+| 2 | map, music, hand-built regions 5, 6, 8, 9, 10 (read just before committing) | 10,761,823 |
 
 ## Calibration
 
@@ -144,7 +156,7 @@ Environment facts learned in run 1: the session started with no repository attac
 - `src/ent/`: `player.js` (David; `PHYS`, `DASH`, `SLING`), `stone.js` (carries `tags` such as `full`, read by captains for the weakness chain), `soldier.js`, `trophy.js`, `boss.js` (`Boss`, driven by a config; `Shot`, every hostile missile and ground wave).
 - `src/gfx/`: `bg.js` (one entry per theme in `THEMES`; ridge, city and sea painters), `tiles.js` (pre-rendered tile layer and cave backing; one palette per theme in `PAL`), `chars.js` (rig-drawn David, soldier kinds, lion, captain, Goliath, Israelite; the ring), `props.js` (gate tiles, water, doorways, camp props, the relic), `decor.js` (scenery and its scattering).
 - `src/world/`: `room.js` (tile kinds, map parsing, collision), `build.js` (`RB`, the room builder; `parseTo`), `reach.js` (the two reachability models and the world flood).
-- `src/data/`: `verses.js`, `powers.js`, `bosses.js` (captain configs), `regions.js` (index; region 0 is the hub), `hub.js`, `r1.js` (hand-built with `RB`), `pieces.js` (set pieces, the segment-based `room()` maker, `arena()`), `r2.js` to `r10.js` (built with `pieces.js`).
+- `src/data/`: `verses.js`, `powers.js`, `bosses.js` (captain configs), `regions.js` (index; region 0 is the hub), `hub.js`, `r1.js`, `r5.js`, `r6.js`, `r8.js`, `r9.js`, `r10.js` (hand-built with `RB`), `pieces.js` (set pieces, the segment-based `room()` maker, `arena()`), `r2.js`, `r3.js`, `r4.js`, `r7.js` (segment-built with `pieces.js`).
 - `src/audio.js` (Web Audio synth: effects and the generated music), `src/input.js` (keyboard and gamepad), `src/font.js` (3x5 pixel font, capitals only), `src/save.js`, `src/debug.js`.
 - `tests/`: `verses.test.mjs`, `reach.test.mjs`, `serve.mjs`, `play/helpers.cjs` (harness, `window.bot` with `walkTo`, `fight`, `fightBoss`, and `overview`), `play/m1.cjs`, `play/m2.cjs`, `play/m3.cjs` (takes an optional section: `powers`, `soldiers`, `bosses`, `story`; the whole file runs about four minutes), `play/m4.cjs` (sections `powers`, `bosses`, `story`), `play/m5.cjs`, `play/look.cjs`. `m3.cjs bosses 4` or `m4.cjs bosses 6` runs a single captain. The whole suite takes about 15 minutes.
 - `tools/meter.py`. (`tools/roomgen.py` is superseded by `src/world/build.js` and kept only as the record of how the first room was made.)
