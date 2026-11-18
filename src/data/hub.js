@@ -4,7 +4,7 @@ import { RB } from '../world/build.js';
 import { POWERS } from './powers.js';
 
 // Start room of each built region, and the link inside it that leads back to camp.
-export const REGION_ENTRY = { 1: 'outskirts/camp' };
+export const REGION_ENTRY = { 1: 'outskirts/camp', 2: 'vineyard/camp', 3: 'descent/camp', 4: 'thicket/camp', 5: 'lines/camp' };
 export const GATE_X = (n) => 36 + 11 * (n - 1);
 const standAt = (x) => (x < 56 ? 17 : x < 101 ? 16 : 15);
 

@@ -82,6 +82,7 @@ const { launch, checker } = require('./helpers.cjs');
   // Back away and watch it bounce and settle.
   const flight = await ev((id) => {
     const g = __ift.game, tr = g.trophies.find((x) => x.id === id);
+    g.godmode = true;                                         // this watches the trophy for 15 seconds; other soldiers must not end the watch
     let bounces = 0, prev = tr.vy, blinks = 0, frames = 0;
     const away = g.player.cx < tr.cx ? 'left' : 'right';
     for (; frames < 900; frames++) {
@@ -90,6 +91,7 @@ const { launch, checker } = require('./helpers.cjs');
       prev = tr.vy; if (tr.blink(g.time)) blinks++;
       if (tr.taken) return { taken: true };
     }
+    g.godmode = false;
     return { bounces, blinks, rest: tr.rest, still: g.trophies.includes(tr), secs: frames / 60 };
   }, id);
   t.ok(flight.bounces >= 2, 'the trophy bounces before settling', flight);

@@ -4,10 +4,11 @@ import { Input } from './input.js';
 import { Sfx } from './audio.js';
 import { loadSave, writeSave, freshSave, clearSave } from './save.js';
 import { REGIONS, regionById } from './data/regions.js';
-import { parseRoom, moveBody, AIR, REED, WATER, GATE_POWER } from './world/room.js';
+import { parseRoom, moveBody, AIR, REED, WATER, RING, GATE_POWER } from './world/room.js';
 import { parseTo } from './world/build.js';
 import { BOSSES } from './data/bosses.js';
 import { POWERS } from './data/powers.js';
+import { ENDING_B_VERSE, VERSION_TAG } from './data/verses.js';
 import { Boss } from './ent/boss.js';
 import { UI } from './ui.js';
 import { drawGate, drawWater, drawDoor, drawProp, drawRelic } from './gfx/props.js';
@@ -75,8 +76,8 @@ export class Game {
         const st = this.save.soldiers[sp.id];
         if (st === 'c') continue;                                              // trophy already collected
         if (Array.isArray(st)) this.trophies.push(new Trophy(sp.id, st[0], st[1], this.homeOf(sp), null, this.rand));
-        else this.soldiers.push(new Soldier(sp, true));
-      } else if (sp.type === 'soldier') this.soldiers.push(new Soldier(sp, false));
+        else this.soldiers.push(new Soldier(sp, true, region.id));
+      } else if (sp.type === 'soldier') this.soldiers.push(new Soldier(sp, false, region.id));
       else if (sp.type === 'boss' && this.room.boss) {
         const n = this.room.boss;
         this.bossSpawn = sp;
@@ -84,6 +85,8 @@ export class Game {
         else if (!this.has(POWERS[n - 1].id)) this.spawnRelic(n);
       }
     }
+    this.rings = [];
+    for (let y = 0; y < this.room.h; y++) for (let x = 0; x < this.room.w; x++) if (this.room.tile(x, y) === RING) this.rings.push({ x: x * T + 8, y: y * T + 8 });
     this.fires = this.room.props.filter((q) => q.type === 'fire').map((q) => ({ x: q.cx * T + 8, y: (q.cy + 1) * T + 12, seed: q.cx * 0.7, fire: true }));
     const link = linkId ? this.room.link(linkId) : null;
     const s = link ? { cx: link.kind === 'edge' ? (link.side === 'L' ? 1 : this.room.w - 2) : link.cx, cy: link.cy, face: link.kind === 'edge' ? (link.side === 'L' ? 1 : -1) : 1 }
@@ -99,7 +102,10 @@ export class Game {
     this.lastName = this.room.name;
     this.fade = 1;
     this.persist();
-    if (region.id === 0 && this.onHub) this.onHub();
+    if (region.id === 0) {
+      if (this.flag('scene100')) this.room.props = [...this.room.props, { type: 'guard', cx: 25, cy: 17, face: -1 }];
+      else if (this.flag('hundred')) this.after(1.0, () => this.messenger());
+    }
   }
   homeOf(sp) { return { x: sp.cx * T + 8, y: (sp.cy + 1) * T - 6 }; }
 
@@ -166,9 +172,50 @@ export class Game {
     this.sfx.play('door');
     this.loadRoom(to.region, to.room, to.link, { keepHp: true });
   }
+  // The halfway choice. When the tally first reaches 100 a messenger waits at the camp; once his
+  // scene has played, Saul's tent offers Ending A whenever the player asks for it.
+  checkHundred() {
+    if (this.save.tally >= 100 && !this.flag('hundred')) {
+      this.save.flags.hundred = 1; this.persist();
+      if (this.region.id === 0) this.after(0.6, () => this.messenger());
+      else this.banner2("THE KING'S PRICE IS MET. A MESSENGER WAITS AT SAUL'S CAMP", 6);
+    }
+  }
+  messenger() {
+    if (this.flag('scene100') || !this.flag('hundred')) return;
+    this.ui.scene('hundred', [
+      { title: 'A Messenger from Saul', text: ["A runner comes down from the king's tent, short of breath, and finds David among the fires."] },
+      { text: ['"The king set his price at a hundred. A hundred are counted. The king\'s price is met."'] },
+      { text: ['"Come up now and claim Michal, the king\'s daughter. Or go out again, if you will: the Philistines still hold the valley, and the king will hear you whenever you choose."'] },
+    ], [{ label: 'Continue', value: 'ok' }], () => { this.save.flags.scene100 = 1; this.persist(); this.banner2("SAUL'S TENT WILL HEAR DAVID WHEN HE CHOOSES", 5); }, { tally: this.save.tally });
+  }
   saul() {
     const n = this.save.tally;
-    this.ui.scene('saul', [{ title: "Saul's Tent", text: [n >= 100 ? "The king's price is met." : `The king asks no dowry but a hundred trophies of the Philistines. David has brought ${n}.`] }], [{ label: 'Leave', value: 'leave' }]);
+    if (!this.flag('scene100')) {
+      this.ui.scene('saul', [{ title: "Saul's Tent", text: [`The king asks no dowry but a hundred trophies of the Philistines. David has brought ${n}.`] }], [{ label: 'Leave', value: 'leave' }]);
+      return;
+    }
+    const full = n >= TALLY_GOAL && this.flag('boss10');
+    const buttons = full ? [{ label: 'Give them in full tale', value: 'B' }, { label: 'Not yet', value: 'leave' }] : [{ label: 'Claim Michal now', value: 'A' }, { label: 'Press on', value: 'leave' }];
+    const text = full ? ['Two hundred. Every captain of the Philistines has fallen. The king waits.'] : [`The king's price is met: David has brought ${n}, and a hundred were asked.`, 'He may claim Michal now, or press on and bring the tale in full.'];
+    this.ui.scene('saul', [{ title: "Saul's Tent", text }], buttons, (v) => { if (v === 'A') this.endingA(); else if (v === 'B' && this.endingB) this.endingB(); });
+  }
+  endingA() {
+    const n = this.save.tally;
+    this.save.flags.endingA = 1; this.persist();
+    this.ui.scene('endingA', [
+      { title: "The King's Son in Law", text: ['David goes up to the tent and the count is made before the king.', 'Saul keeps his word. Michal, the king\'s daughter, is given to David to be his wife.'] },
+      { text: [`The price is paid: ${n} of two hundred. The valley is not yet quiet, and the captains beyond it still stand.`] },
+      { title: 'Ending A', text: ['The price is met.'], cls: 'end', html: '<p class="say">The tale can still be told in full. David may go out again.</p>' },
+    ], [{ label: 'Keep playing', value: 'ok' }], () => this.banner2('THE GATEWAYS STAND OPEN STILL', 4), { tally: n });
+  }
+  // Ending B: all 200 and the last captain. Closes on 1 Samuel 18:27.
+  endingB() {
+    this.save.flags.endingB = 1; this.persist();
+    this.ui.scene('endingB', [
+      { title: 'In Full Tale', text: ['David rises and goes up to the king, he and his men, and the count is made before all the camp.', 'Not a hundred. Two hundred. No captain of the Philistines is left standing between Gath and the valley.'] },
+      { title: 'Ending B', text: [], html: `<p class="verse-text">${ENDING_B_VERSE.text}</p><p class="verse-ref"><span class="ref">${ENDING_B_VERSE.ref}</span> <span class="tag">${VERSION_TAG}</span></p>` },
+    ], [{ label: 'Keep playing', value: 'ok' }], null, { tally: this.save.tally });
   }
   onBossDying(b) { this.shots.length = 0; for (const s of this.soldiers) if (s.summoned) s.die(this, 0); }
   onBossFell(b) {
@@ -186,14 +233,16 @@ export class Game {
     if (!this.has(id)) this.save.powers.push(id);
     this.room.shield = this.has('shield');
     this.relic = null; this.persist();
-    this.ui.power(id, () => this.banner2('THE WAY BACK TO CAMP IS OPEN', 3));
+    this.ui.power(id, () => this.banner2(id === 'valor' ? (this.save.tally >= TALLY_GOAL ? 'THE TALE IS FULL. RETURN TO SAUL' : `${this.save.tally} OF 200. THE TALE IS NOT YET FULL`) : 'THE WAY BACK TO CAMP IS OPEN', 4));
   }
   summon(boss, n, kind) {
     for (let i = 0; i < n; i++) {
-      const cx = i % 2 ? this.room.w - 4 : 3, s = new Soldier({ type: 'soldier', kind, cx, cy: Math.floor((boss.y + boss.h - 1) / T) }, false);
+      const cx = i % 2 ? this.room.w - 4 : 3, s = new Soldier({ type: 'soldier', kind, cx, cy: Math.floor((boss.y + boss.h - 1) / T) }, false, this.region.id);
       s.summoned = true; s.state = 'chase'; this.soldiers.push(s);
     }
   }
+  // Does the buckler turn a spear or blade coming from direction dir (+1 = travelling right)?
+  blocks(dir) { const p = this.player; return this.has('shield') && !p.charging && p.swordT <= 0 && p.face === -dir; }
   // Does David's buckler turn this missile? (Bronze Buckler, region 6.)
   guards(shot) { const p = this.player; return this.has('shield') && !p.charging && shot.kind !== 'wave' && Math.sign(shot.vx) === -p.face; }
 
@@ -204,6 +253,7 @@ export class Game {
     this.save.tally = Math.min(TALLY_GOAL, this.save.tally + 1);
     this.tallyPulse = 0.6;
     this.sfx.play('collect');
+    this.checkHundred();
     for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; this.parts.push({ x: tr.cx, y: tr.cy, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70, g: 0, life: 0.35, max: 0.35, col: '#fff3c8', size: 1, glow: true }); }
     this.persist();
   }
@@ -334,7 +384,7 @@ export class Game {
     for (const k of this.pickups) drawFig(w, Math.round(k.x + 3 - cx), Math.round(k.y + 7 - cy));
     for (const s of this.soldiers) if (on(s.x, s.y)) s.draw(w, cx, cy);
     if (this.boss) this.boss.draw(w, cx, cy);
-    p.draw(w, cx, cy);
+    p.draw(w, cx, cy, this);
     if (this.relic) drawRelic(w, Math.round(this.relic.x - cx), Math.round(this.relic.y - cy), this.relic.t, this.relic.power === 'sword');
     for (const s of this.stones) s.draw(w, cx, cy);
     for (const s of this.shots) s.draw(w, cx, cy);

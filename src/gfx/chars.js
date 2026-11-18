@@ -90,9 +90,20 @@ export function drawDavid(ctx, x, y, p, flash) {
   const drift = Math.min(3, Math.abs(p.vx) / 45), flap = Math.sin(p.t * 9) > 0 ? 1 : 0;
   R(-4, hy + 2, 1, 1, D.blue); R(-5, hy + 2 + (drift > 1 ? 0 : 1), 1, 1, D.blue);
   R(-6, hy + 3 - (drift > 2 ? 1 : 0) + flap, 1, 1, D.blueD); if (drift > 1) R(-7, hy + 2 + flap, 1, 1, D.blueD);
+  const gear = p.gear || {};
+  if (gear.shield) { R(-7, ty + 1, 4, 6, '#c98b3f'); R(-7, ty + 1, 4, 1, '#ffd680'); R(-6, ty + 3, 2, 2, '#ffd680'); R(-7, ty + 6, 4, 1, '#86522a'); }
+  if (gear.sword && !(p.swordT > 0)) { Ln(-5, ty + 9, 3, ty - 4, '#8c90a6'); Ln(-4, ty + 9, 4, ty - 4, '#d9dbe6'); R(2, ty - 5, 3, 2, '#ffd680'); }
   // Front arm and sling
   const shx = 1, shy = ty + 1;
-  if (p.charging) {
+  if (p.swordT > 0) {
+    // Goliath's sword, far too long for him, swung in a flat arc.
+    const k = 1 - p.swordT / 0.18, ang = -1.9 + k * 2.9, ex = shx + Math.cos(ang) * 5, ey = shy + Math.sin(ang) * 5;
+    Ln(shx, shy, ex, ey, D.skin, 2);
+    Ln(ex, ey, ex + Math.cos(ang) * 15, ey + Math.sin(ang) * 15, '#ffffff', 2); Ln(ex, ey + 1, ex + Math.cos(ang) * 14, ey + 1 + Math.sin(ang) * 14, '#8c90a6');
+    R(ex - 1, ey - 1, 3, 3, '#ffd680');
+  } else if ((p.hang || p.zip || p.cling) && !p.charging) {
+    Ln(shx, shy, p.cling ? 5 : 2, p.cling ? hy : hy - 4, D.skin, 2);
+  } else if (p.charging) {
     const hx = 3, hyd = hy - 3;                             // hand raised overhead, sling whirling
     Ln(shx, shy, hx, hyd, D.skin, 2);
     for (let k = 2; k >= 0; k--) {
@@ -142,7 +153,22 @@ function poseSoldier(p) {
     Ln(tx, tyy, x1, y1, st === 'windup' && Math.sin(p.t * 40) > 0 ? '#ffffff' : S.bronzeH, 1);
     Ln(tx, tyy + 1, x1 - (x1 > x0 ? 1 : 0), y1 + 1, S.bronze, 1);
   };
-  if (st === 'patrol' || st === 'stagger') spear();
+  const kind = p.kind || 'spear';
+  const weapon = () => {
+    if (kind === 'spear') return spear();
+    if (kind === 'heavy') {                                  // a broad iron sword
+      const L = st === 'windup' ? [-3, -20, -9, -33] : st === 'thrust' ? [3, -17, 19, -12] : st === 'recover' ? [3, -14, 14, -4] : [-5, -10, -7, -24];
+      Ln(L[0], L[1], L[2], L[3], st === 'windup' && Math.sin(p.t * 40) > 0 ? '#ffffff' : '#d9dbe6', 2); R(L[0] - 1, L[1], 3, 2, S.bronzeH);
+      return;
+    }
+    // archer: a short bow, drawn in the wind-up
+    const pull = st === 'windup' ? 4 : 0, bx = 6;
+    for (let i = -6; i <= 6; i++) R(bx + (Math.abs(i) > 4 ? -1 : Math.abs(i) > 2 ? 0 : 1), -17 + i, 1, 1, S.shaft);
+    Ln(bx - 1, -23, bx - 1 - pull, -17, '#e9d9b0'); Ln(bx - 1 - pull, -17, bx - 1, -11, '#e9d9b0');
+    if (st === 'windup') { Ln(bx - 1 - pull, -17, bx + 6, -17, S.shaft); R(bx + 6, -18, 2, 3, S.bronzeH); }
+    R(-6, -22, 2, 8, '#6d4628'); R(-6, -24, 1, 2, '#e9d9b0'); R(-5, -25, 1, 3, '#e9d9b0');      // quiver
+  };
+  if (kind !== 'archer' && (st === 'patrol' || st === 'stagger')) weapon();
   // Legs with greaves
   Ln(-1, hip, b[0], -2 - b[1], S.skinD, 2); R(b[0], -4 - b[1], 2, 3, S.bronzeD); R(b[0], -1 - b[1], 3, 1, S.boot);
   Ln(1, hip, a[0], -2 - a[1], S.skin, 2); R(a[0], -4 - a[1], 2, 3, S.bronze); R(a[0], -1 - a[1], 3, 1, S.boot);
@@ -166,7 +192,13 @@ function poseSoldier(p) {
     R(fx, hy - 1 - hts[i], 1, hts[i], i % 2 ? pl[0] : (p.marked ? '#b02a26' : '#b3a583'));
     R(fx + sway, hy - 1 - hts[i], 1, 2, pl[1]);
   }
-  if (st !== 'patrol' && st !== 'stagger') spear();
+  if (kind === 'archer' || (st !== 'patrol' && st !== 'stagger')) weapon();
+  if (kind === 'archer') return;
+  if (kind === 'heavy') {                                    // tower shield
+    const sx = (st === 'thrust' ? -2 : 3) + lean, sy = ty - 2;
+    R(sx, sy, 7, 17, S.bronzeD); R(sx + 1, sy + 1, 5, 15, S.bronze); R(sx + 1, sy + 1, 5, 1, S.bronzeH); R(sx + 3, sy + 2, 1, 13, '#7a1f2a'); R(sx + 2, sy + 7, 3, 3, S.bronzeH);
+    return;
+  }
   // Round shield on the leading arm
   const sx = (st === 'windup' ? 1 : st === 'thrust' ? -1 : 3) + lean, sy = ty + 1;
   R(sx + 1, sy, 5, 8, S.bronze); R(sx, sy + 1, 7, 6, S.bronze);
@@ -268,6 +300,60 @@ function poseCaptain(p) {
 export function drawCaptain(ctx, x, y, p, flash) { poseCaptain(p); stamp(ctx, x, y, flash); }
 export function drawCaptainLight(ctx, x, y, p, squash, alpha) { poseCaptain(p); stampLight(ctx, x, y, squash, alpha); }
 
+// ---------------------------------------------------------------- Goliath of Gath
+// Six cubits and a span: more than twice David's height, bronze from helmet to greaves (1 Samuel 17:5-7).
+// light: [squash, alpha] for the dissolve.
+export function drawGoliath(ctx, x, y, p, flash, light) {
+  begin(p.face);
+  const L = p.look, st = p.state, atk = p.attack ? p.attack.id : '', moving = p.moving;
+  const s = Math.sin(p.walk * 0.8), c = Math.cos(p.walk * 0.8);
+  const down = st === 'stagger', by = down ? 14 : (st === 'tele' && atk === 'stomp' ? -2 : 0) + (st === 'recover' ? 2 : 0) + (moving && Math.abs(c) > 0.6 ? 1 : 0);
+  const lean = st === 'tele' && atk !== 'stomp' ? -3 : st === 'act' && (atk === 'sweep' || atk === 'charge') ? 5 : down ? 4 : 0;
+  let a = [5, 0], b = [-6, 0];
+  if (moving) { a = [Math.round(s * 6), Math.round(Math.max(0, c) * 3)]; b = [Math.round(-s * 6), Math.round(Math.max(0, -c) * 3)]; }
+  if (st === 'tele' && atk === 'stomp') a = [6, 9];
+  if (down) { a = [10, 0]; b = [-8, 0]; }
+  const hip = -24 + by, ty = -46 + by, tx = -8 + lean;
+  // spear
+  let wl = [-12, -22 + by, 24, -40 + by];
+  if (st === 'tele') wl = atk === 'volley' ? [-22, -58, 14, -50] : atk === 'stomp' ? [10, -4, 12, -66] : [-26, -36, 10, -44];
+  else if (st === 'act') wl = atk === 'sweep' ? [0, -30, 54, -12] : atk === 'charge' ? [-4, -34, 40, -34] : atk === 'volley' ? [4, -40, 16, -30] : [10, -4, 12, -62];
+  else if (down) wl = [6, -2, 26, -40];
+  const thrown = (st === 'act' || st === 'recover') && atk === 'volley';
+  const spear = () => {
+    if (thrown) return;
+    const [x0, y0, x1, y1] = wl;
+    Ln(x0, y0, x1, y1, S.shaft, 3);
+    const mx = x0 + (x1 - x0) * 0.82, my = y0 + (y1 - y0) * 0.82, hot = st === 'tele' && Math.sin(p.t * 40) > 0;
+    Ln(mx, my, x1, y1, hot ? '#ffffff' : '#d9dbe6', 3); Ln(mx, my + 2, x1, y1 + 2, '#8c90a6', 1);
+  };
+  // cape
+  for (let i = 0; i < 30; i++) R(tx - 5 - (i > 16 ? 1 : 0), ty + 2 + i, 7, 1, i % 7 === 6 ? '#000000' : L.cape);
+  if (st === 'idle' || st === 'intro' || down) spear();
+  // legs: bronze greaves
+  if (down) { Ln(-3, hip, -8, -3, S.skinD, 5); R(-10, -4, 12, 4, L.bronzeD); Ln(4, hip, 10, -10, S.skin, 5); R(8, -11, 5, 11, L.bronze); R(8, -1, 7, 1, S.boot); }
+  else {
+    Ln(-3, hip, b[0], -4 - b[1], S.skinD, 5); R(b[0] - 1, -13 - b[1], 6, 12, L.bronzeD); R(b[0] - 1, -1 - b[1], 8, 1, S.boot);
+    Ln(4, hip, a[0], -4 - a[1], S.skin, 5); R(a[0] - 1, -13 - a[1], 6, 12, L.bronze); R(a[0], -13 - a[1], 1, 12, L.bronzeH); R(a[0] - 1, -1 - a[1], 8, 1, S.boot);
+  }
+  // kilt of scale
+  R(-9, hip - 7, 19, 9, L.kilt); R(-8, hip + 2, 17, 1, L.kilt); R(-9, hip - 7, 4, 9, L.kiltD); R(-9, hip - 3, 19, 1, L.band); R(-2, hip + 3, 5, 2, L.band);
+  // coat of mail
+  R(tx, ty, 18, 17, L.bronze); R(tx, ty, 5, 17, L.bronzeD);
+  for (let r = 1; r < 17; r += 2) for (let q = (r >> 1) % 2; q < 18; q += 2) R(tx + q, ty + r, 1, 1, q < 5 ? '#5a3a1a' : L.bronzeD);
+  for (let r = 0; r < 17; r += 4) R(tx + 14, ty + r, 2, 1, L.bronzeH);
+  R(tx - 2, ty - 1, 6, 5, L.bronzeH); R(tx + 14, ty - 1, 6, 5, L.bronzeH); R(tx - 2, ty + 3, 6, 1, L.bronzeD); R(tx + 14, ty + 3, 6, 1, L.bronzeD);
+  // head: helmet of bronze, heavy beard
+  const hx = tx + 4, hy = ty - 11;
+  R(hx, hy, 10, 10, S.skin); R(hx, hy, 3, 10, S.skinD); R(hx + 7, hy + 4, 2, 1, S.eye); R(hx + 5, hy + 3, 4, 1, S.skinD);
+  R(hx + 2, hy + 6, 8, 5, L.beard); R(hx + 9, hy + 5, 1, 3, L.beard);
+  R(hx - 1, hy - 3, 12, 5, L.bronze); R(hx - 1, hy - 3, 12, 1, L.bronzeH); R(hx - 1, hy + 1, 3, 6, L.bronzeD); R(hx + 6, hy + 2, 2, 4, L.bronzeD);
+  const hts = [4, 7, 9, 11, 12, 12, 12, 11, 9, 7, 5, 4];
+  for (let i = 0; i < 12; i++) { R(hx - 2 + i, hy - 3 - hts[i], 1, hts[i], i % 2 ? L.plume[0] : '#3a0f12'); R(hx - 2 + i, hy - 3 - hts[i], 1, 2, L.plume[1]); }
+  if (!(st === 'idle' || st === 'intro' || down)) spear();
+  if (light) stampLight(ctx, x, y, light[0], light[1]); else stamp(ctx, x, y, flash);
+}
+
 // ---------------------------------------------------------------- Israelite soldier (camp)
 const I = { skin: '#d9a073', skinD: '#a86f4a', tunic: '#8fa3b8', tunicD: '#5d6f86', cap: '#6d4628', belt: '#3a2a22', shaft: '#6a4a34', tip: '#cfd3de' };
 export function drawIsraelite(ctx, x, y, face, t, seed = 0) {
@@ -280,6 +366,27 @@ export function drawIsraelite(ctx, x, y, face, t, seed = 0) {
   R(-4, -27 + by, 8, 3, I.cap); R(-4, -25 + by, 1, 3, I.cap);
   R(2, -17 + by, 5, 7, '#7a5a3a'); R(2, -17 + by, 5, 1, '#a07a4e'); R(4, -14 + by, 1, 1, '#d9b85e');
   stamp(ctx, x, y, false);
+}
+
+// ---------------------------------------------------------------- lion of Timnah
+const LN = { body: '#c7924a', bodyD: '#8f6230', mane: '#6d3f1e', maneH: '#9a5a2a', belly: '#e0b878', eye: '#ffe9a0' };
+// p: { face, walk, moving, state, onGround, t }. light: [squash, alpha] for the dissolve.
+export function drawLion(ctx, x, y, p, flash, light) {
+  begin(p.face);
+  const s = Math.sin(p.walk * 1.4), st = p.state, air = !p.onGround, crouch = st === 'windup' ? 3 : 0;
+  const by = -crouch;
+  const legs = air ? [[-9, 3], [-6, 2], [7, 3], [10, 4]] : p.moving ? [[-8 + s * 3, 0], [-5 - s * 3, 0], [6 + s * 3, 0], [9 - s * 3, 0]] : [[-8, 0], [-5, 0], [6, 0], [9, 0]];
+  for (const [lx, up] of legs) { Ln(lx > 0 ? 7 : -7, -7 - by, lx, -1 - up, LN.bodyD, 2); R(lx, -1 - up, 3, 1, LN.bodyD); }
+  // tail
+  const tw = Math.round(Math.sin(p.t * 5) * 2);
+  Ln(-10, -10 - by, -15, -13 + tw, LN.body); R(-16, -14 + tw, 2, 2, LN.mane);
+  R(-10, -12 + crouch, 18, 7, LN.body); R(-10, -7 + crouch, 18, 2, LN.belly); R(-10, -12 + crouch, 18, 1, LN.bodyD);
+  // mane and head
+  const hx = air || st === 'thrust' ? 9 : 7, hy = -16 + crouch;
+  R(hx - 5, hy, 9, 10, LN.mane); R(hx - 4, hy - 1, 7, 1, LN.mane); R(hx - 5, hy + 2, 2, 6, LN.maneH); R(hx - 2, hy, 3, 2, LN.maneH);
+  R(hx, hy + 2, 6, 6, LN.body); R(hx + 4, hy + 5, 3, 3, LN.belly); R(hx + 3, hy + 3, 1, 1, LN.eye); R(hx + 6, hy + 5, 1, 1, '#2a1818');
+  if (st === 'windup' || st === 'thrust') R(hx + 4, hy + 7, 3, 1, '#ffffff');
+  if (light) stampLight(ctx, x, y, light[0], light[1]); else stamp(ctx, x, y, flash);
 }
 
 // ---------------------------------------------------------------- trophy: a pale curled ring

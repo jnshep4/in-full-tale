@@ -49,8 +49,9 @@ export function parseRoom(def, regionId) {
     shield: false,                 // set by the game when David carries the buckler: spear hedges part for him
     // Beyond the side edges the edge column repeats, so the floor of an edge exit carries on off-screen.
     tile(cx, cy) {
-      if (cy < 0 || cy >= h) return AIR;
       if (cx < 0) cx = 0; else if (cx >= w) cx = w - 1;
+      if (cy < 0) return tiles[cx] === SOLID ? SOLID : AIR;      // a wall that reaches the top of the room has no top
+      if (cy >= h) return AIR;
       return tiles[cy * w + cx];
     },
     set(cx, cy, t) { if (cx >= 0 && cx < w && cy >= 0 && cy < h) tiles[cy * w + cx] = t; },

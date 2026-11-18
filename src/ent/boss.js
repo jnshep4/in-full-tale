@@ -2,7 +2,7 @@
 // attacks he knows, how fast he is, and which of David's powers he is weak to.
 import { T, approach, overlap, clamp } from '../core.js';
 import { moveBody } from '../world/room.js';
-import { drawCaptain, drawCaptainLight } from '../gfx/chars.js';
+import { drawCaptain, drawCaptainLight, drawGoliath } from '../gfx/chars.js';
 
 // A hostile missile or ground wave. kind: 'javelin' | 'arrow' | 'wave' | 'rock'
 export class Shot {
@@ -11,7 +11,7 @@ export class Shot {
     this.grav = o.grav ?? (kind === 'wave' ? 0 : 300); this.life = o.life ?? 3; this.dmg = o.dmg ?? 1;
     this.dead = false; this.stuck = 0; this.turned = false; this.owner = o.owner || null; this.t = 0;
   }
-  box() { return this.kind === 'wave' ? { x: this.x - 6, y: this.y - 12, w: 12, h: 12 } : { x: this.x - 3, y: this.y - 3, w: 6, h: 6 }; }
+  box() { return this.kind === 'beam' ? { x: this.x - 12, y: this.y - 3, w: 24, h: 6 } : this.kind === 'wave' ? { x: this.x - 6, y: this.y - 12, w: 12, h: 12 } : { x: this.x - 3, y: this.y - 3, w: 6, h: 6 }; }
   update(g, dt) {
     this.t += dt; this.life -= dt;
     if (this.life <= 0) { this.dead = true; return; }
@@ -42,11 +42,12 @@ export class Shot {
       ctx.fillStyle = '#fff3c8'; ctx.fillRect(x, y - hgt - 2, 1, 3);
       return;
     }
-    const a = Math.atan2(this.vy, this.vx), len = this.kind === 'javelin' ? 9 : this.kind === 'rock' ? 0 : 6;
+    const a = Math.atan2(this.vy, this.vx), len = this.kind === 'beam' ? 26 : this.kind === 'javelin' ? 9 : this.kind === 'rock' ? 0 : 6;
     if (this.kind === 'rock') { ctx.fillStyle = '#0e0a12'; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.fillStyle = '#8a7f96'; ctx.fillRect(x - 2, y - 2, 4, 4); ctx.fillStyle = '#b9afc4'; ctx.fillRect(x - 2, y - 2, 2, 1); return; }
     for (let i = -len; i <= len; i++) {
       ctx.fillStyle = i > len - 3 ? (this.turned ? '#ffffff' : '#ffd680') : '#6a4a34';
-      ctx.fillRect(Math.round(x + Math.cos(a) * i * 0.5), Math.round(y + Math.sin(a) * i * 0.5), 1, 1);
+      const th = this.kind === 'beam' ? 2 : 1;
+      ctx.fillRect(Math.round(x + Math.cos(a) * i * 0.5), Math.round(y + Math.sin(a) * i * 0.5), th, th);
     }
   }
 }
@@ -68,8 +69,12 @@ export class Boss {
   speed() { return (this.cfg.speed || 1) * (this.phase === 2 ? 1.25 : 1); }
 
   choose(g, adx) {
-    const list = this.cfg.attacks.filter((a) => (!a.phase || a.phase <= this.phase) && (a.min || 0) <= adx && adx <= (a.max || 999) && a.id !== this.last);
-    const pool = list.length ? list : this.cfg.attacks.filter((a) => !a.phase || a.phase <= this.phase);
+    const ok = (a) => (!a.phase || a.phase <= this.phase) && !(a.id === 'summon' && g.soldiers.filter((s) => s.summoned && s.state !== 'dying').length >= (a.limit || 2));
+    const list = this.cfg.attacks.filter((a) => ok(a) && (a.min || 0) <= adx && adx <= (a.max || 999) && a.id !== this.last);
+    let pool = list.length ? list : this.cfg.attacks.filter(ok);
+    // David overhead and out of reach: use what can reach him.
+    const p = g.player;
+    if (this.y - (p.y + p.h) > 20) { const up = this.cfg.attacks.filter((a) => ok(a) && ['volley', 'rain', 'leap', 'summon', 'stomp'].includes(a.id) && a.id !== this.last); if (up.length) pool = up; }
     let tot = 0; for (const a of pool) tot += a.w || 1;
     let r = g.rand() * tot;
     for (const a of pool) { r -= a.w || 1; if (r <= 0) return a; }
@@ -98,6 +103,8 @@ export class Boss {
       case 'idle':
         if (adx > 4) this.face = Math.sign(dx);
         this.vx = adx > (this.cfg.keep || 60) ? this.face * 42 * sp : 0;
+        // David out of reach overhead (on a wall, a ring, a high plank): stand off rather than wait beneath him.
+        if (this.y - (p.y + p.h) > 20 && !this.cfg.giant) this.vx = adx < 96 ? -this.face * 50 * sp : adx > 124 ? this.face * 42 * sp : 0;
         this.cool -= dt;
         if (this.cool <= 0 && !p.dead) { this.attack = this.choose(g, adx); this.last = this.attack.id; this.state = 'tele'; this.t = (this.attack.tele || 0.5) / sp; this.vx = 0; this.n = 0; g.sfx.play('windup'); }
         break;
@@ -141,9 +148,12 @@ export class Boss {
       case 'charge': this.t = 2.2; this.vx = this.face * (A.v || 250) * sp; g.sfx.play('roar'); break;
       case 'leap': {
         this.t = 3; const reach = clamp(dx, -190, 190);
-        this.vy = -(A.vy || 400); this.vx = reach / (2 * (A.vy || 400) / 1200); this.onGround = false; g.sfx.play('jump'); break;
+        const jv = Math.max(A.vy || 400, Math.min(560, Math.sqrt(2400 * Math.max(0, this.y + this.h - p.y - this.h + 24))));     // high enough to reach him
+        this.vy = -jv; this.vx = reach / (2 * jv / 1200); this.onGround = false; g.sfx.play('jump'); break;
       }
       case 'volley': this.t = 0.2; this.n = A.n || 3; break;
+      case 'stomp': this.t = 0.25; g.shake = 9; g.sfx.play('slam'); g.puff(this.cx + this.face * 10, this.y + this.h, 16, '#b9a685', 150);
+        for (const d of [-1, 1]) g.shots.push(new Shot('wave', this.cx + d * 14, this.y + this.h, d * 170, 0, { life: 1.1, owner: this })); break;
       case 'summon': this.t = 0.5; g.summon(this, A.n || 2, A.kind || 'spear'); g.sfx.play('roar'); break;
       case 'rain': this.t = 0.3; this.n = A.n || 5; break;
       default: this.t = 0.3;
@@ -162,7 +172,7 @@ export class Boss {
       }
       case 'sweep': {
         this.vx = approach(this.vx, 0, 300 * dt);
-        const arc = { x: this.face > 0 ? this.x + this.w - 4 : this.x - 30, y: this.y - 6, w: 34, h: this.h + 6 };
+        const rch = A.reach || 30, arc = { x: this.face > 0 ? this.x + this.w - 4 : this.x - rch, y: this.y + (this.cfg.giant ? 18 : -6), w: rch + 4, h: this.h + 6 - (this.cfg.giant ? 18 : 0) };
         if (!this.struck && this.t < 0.22 && overlap(arc, p)) this.struck = p.hurt(g, A.dmg || 1, this.face) || this.struck;
         break;
       }
@@ -176,6 +186,9 @@ export class Boss {
         this.vx = 0;
         if (this.t <= 0 && this.n > 0) {
           this.n--; this.t = this.n > 0 ? (A.every || 0.28) / this.speed() : 0;
+          if (A.shot === 'beam') {                       // Goliath's spear, like a weaver's beam: flat and fast
+            g.shots.push(new Shot('beam', this.cx + this.face * 16, this.y + 26, this.face * 300, -20, { grav: 60, dmg: 2, owner: this })); g.sfx.play('throw'); this.t = 0.2; break;
+          }
           const ox = this.cx + this.face * 8, oy = this.y + 6, tx = p.cx + (g.rand() - 0.5) * 30, flight = clamp(Math.abs(tx - ox) / 230, 0.45, 1.1);
           g.shots.push(new Shot(A.shot || 'javelin', ox, oy, (tx - ox) / flight, (p.cy - oy) / flight - 150 * flight, { owner: this }));
           g.sfx.play('throw');
@@ -206,6 +219,21 @@ export class Boss {
   hit(g, dmg, dir, info = {}) {
     if (this.state === 'dying' || this.state === 'intro') return false;
     const charge = typeof info === 'number' ? info : (info.charge ?? 1), tags = (info && info.tags) || (info && info.tag ? [info.tag] : []);
+    if (tags.includes('dash') && this.cfg.weak !== 'dash') return false;          // a dash only tells against Ittur
+    if (this.cfg.giant) {
+      // Goliath: bronze from the neck down. Lion's Fall drops him to one knee; a stone to the brow wounds him.
+      if (tags.includes('pound')) {
+        if (this.state !== 'stagger' && this.stunCool <= 0) { this.state = 'stagger'; this.t = 2.4; this.stunCool = 7; this.vx = 0; g.banner2('HE IS DOWN: THE BROW', 1.4); g.sfx.play('slam'); }
+        return true;
+      }
+      const down = this.state === 'stagger', brow = down || (info.y !== undefined && info.y < this.y + 15);
+      if (!brow || tags.includes('sword')) { g.sfx.play('tink'); g.puff(this.cx + Math.sign(-dir) * 8, info.y !== undefined ? info.y : this.cy, 5, '#ffd680', 90, { glow: true, life: 0.2 }); return false; }
+      if (down) dmg *= 2;
+      this.hp -= dmg; this.flash = 0.1; g.hitstop = Math.max(g.hitstop, 0.08); g.shake = Math.max(g.shake, 5); g.sfx.play('hit');
+      g.puff(this.cx, this.y + 8, 8 + dmg, '#ffffff', 150, { glow: true, life: 0.25 });
+      if (this.hp <= 0) { this.hp = 0; this.state = 'dying'; this.t = 0; this.vx = 0; g.sfx.play('bossfall'); g.hitstop = 0.3; g.shake = 12; g.onBossDying(this); }
+      return true;
+    }
     const weak = tags.includes(this.cfg.weak);
     const open = this.state === 'recover' || this.state === 'stagger' || (this.state === 'act' && this.attack.id !== 'charge');
     if (this.cfg.guard && !weak && !open && dir === -this.face && charge < (this.cfg.guard === 2 ? 1 : 0.5)) {
@@ -224,10 +252,11 @@ export class Boss {
     return true;
   }
 
-  draw(ctx, cx, cy) { if (this.state !== 'dying') drawCaptain(ctx, this.cx - cx, this.y + this.h - cy, this, this.flash > 0); }
+  draw(ctx, cx, cy) { if (this.state !== 'dying') (this.cfg.giant ? drawGoliath : drawCaptain)(ctx, this.cx - cx, this.y + this.h - cy, this, this.flash > 0); }
   drawGlow(ctx, cx, cy) {
     if (this.state !== 'dying') return;
     const k = Math.min(1, this.t / 1.8);
-    drawCaptainLight(ctx, this.cx - cx, this.y + this.h - cy, this, 1 - 0.6 * k * k, 1 - k);
+    if (this.cfg.giant) drawGoliath(ctx, this.cx - cx, this.y + this.h - cy, this, false, [1 - 0.6 * k * k, 1 - k]);
+    else drawCaptainLight(ctx, this.cx - cx, this.y + this.h - cy, this, 1 - 0.6 * k * k, 1 - k);
   }
 }

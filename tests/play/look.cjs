@@ -11,10 +11,17 @@ const { launch, overview } = require('./helpers.cjs');
     await overview(h, `look-${rid}-${id}-map`, w > 120 ? 0.4 : 0.5);
     const n = Math.max(1, Math.round(w / 34));
     for (let i = 0; i < n; i++) {
-      await h.ev(([i, n]) => { const g = __ift.game; g.cam.x = Math.min(g.maxCamX, (g.maxCamX) * (n === 1 ? 0 : i / (n - 1))); g.cam.y = g.maxCamY; g.camTarget = () => ({ x: g.cam.x, y: g.cam.y }); g.fade = 0; g.banner.t = 0; g.render(); }, [i, n]);
+      await h.ev(([i, n]) => {
+        const g = __ift.game, room = g.room, p = g.player;
+        const cx = Math.min(room.w - 3, Math.max(2, Math.round(15 + (room.w - 30) * (n === 1 ? 0.5 : i / (n - 1)))));
+        let cy = 2; while (room.solid(cx, cy)) cy++; while (cy < room.h - 1 && !room.solid(cx, cy + 1) && room.tile(cx, cy + 1) !== 2) cy++;   // first floor from the top
+        p.x = cx * 16 + 3; p.y = (cy + 1) * 16 - 22; p.vx = p.vy = 0; p.inv = 0;
+        for (const s of g.soldiers) s.update = () => {};                                                    // hold the scene still
+        if (g.boss) g.boss.update = () => {};
+        g.snapCamera(); g.fade = 0; g.banner.t = 0; __ift.step(1, []); g.snapCamera(); g.render();
+      }, [i, n]);
       await h.shot(`look-${rid}-${id}-${i}`);
     }
-    await h.ev(() => { delete __ift.game.camTarget; });
   }
   console.log(h.errors.length ? h.errors : 'no page errors');
   await h.close();

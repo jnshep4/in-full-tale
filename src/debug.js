@@ -29,7 +29,7 @@ export function mountDebug(game, root) {
       game.room.shield = game.has('shield'); game.persist();
     }; });
   };
-  const toggle = (open = el.hidden) => { el.hidden = !open; game.modal = open; if (open) build(); else if (document.activeElement) document.activeElement.blur(); };
+  const toggle = (open = el.hidden) => { el.hidden = !open; game.modal = open; if (open) build(); else { if (document.activeElement) document.activeElement.blur(); game.checkHundred(); } };
   game.onDebug = () => toggle();
   return { toggle };
 }

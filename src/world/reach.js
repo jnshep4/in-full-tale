@@ -67,7 +67,7 @@ function floodRoom(room, m, seeds, seen) {
       if (!free(x, y - h)) break;
       const climbing = h > jumpH;
       if (climbing && !(m.climb && (blocks(room.tile(x - 1, y - h + 1)) || blocks(room.tile(x + 1, y - h + 1))))) break;
-      const maxDx = climbing ? 3 : h >= jumpH ? m.maxDx - 1 : m.maxDx;
+      const maxDx = climbing ? (m.optimistic ? m.maxDx : 3) : h >= jumpH ? m.maxDx - 1 : m.maxDx;
       for (const dir of [-1, 1]) {
         for (let d = 1; d <= maxDx; d++) {
           const cx = x + dir * d;

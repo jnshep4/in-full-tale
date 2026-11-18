@@ -52,11 +52,62 @@ function installBot() {
         for (const sh of g().shots) {
           const sdx = sh.x - p.cx;
           if (sh.kind === 'wave') { if (Math.sign(sh.vx) === -Math.sign(sdx) && Math.abs(sdx) < 40) jump = true; }
+          else if (sh.kind === 'beam') { if (Math.abs(sdx) < 90 && Math.sign(sh.vx) === -Math.sign(sdx)) jump = true; }
           else if (Math.abs(sdx) < 70 && Math.abs(sh.y - p.cy) < 60 && sh.stuck <= 0) { move = wallBehind > 40 ? away : toward; if (Math.abs(sdx) < 36) jump = true; }
         }
         if (wallBehind < 14 && move === away) { move = adx < 60 ? toward : null; if (adx < 60) jump = true; }
         if (move) keys.push(move);
         if (jump && p.onGround && !g().input.held.jump) keys.push('jump'); else if (!p.onGround && p.vy < 0) keys.push('jump');
+        // Maroz: fight from the arena wall, out of the lions' reach. Cling four to five tiles up, sling outward.
+        if (opts.wall) {
+          const left = p.cx < roomW / 2, wdir = left ? -1 : 1, wkey = left ? 'left' : 'right', wallX = left ? 32 : roomW - 32 - p.w;
+          const groundY = (g().room.h - 3) * 16, up = groundY - (p.y + p.h);
+          if (!p.cling) {
+            const k5 = [wkey];
+            if (Math.abs(p.x - wallX) < 26 && p.onGround && !g().input.held.jump) k5.push('jump'); else if (!p.onGround && p.vy < 0) k5.push('jump');
+            if (!p.onGround && p.vy >= -20 && p.jumps > 0 && !g().input.held.jump) k5.push('jump');
+            ift.step(1, k5); log.frames++; continue;
+          }
+          if (up < 78 && p.charge === 0) { ift.step(1, [wkey, 'up']); log.frames++; continue; }
+          if (p.charge < 1) { ift.step(1, ['fire']); log.frames++; continue; }
+          // At full charge: find an angle that would strike him, turn the aim to it with up/down, loose.
+          let want = null;
+          for (let ang = 0.1; ang >= -1.3 && want === null; ang -= 0.05) if (bot.wouldHit(ang, b)) want = ang;
+          for (let ang = 0.15; ang <= 1.2 && want === null; ang += 0.05) if (bot.wouldHit(ang, b)) want = ang;
+          if (want === null) { ift.step(1, ['fire']); log.frames++; }
+          else if (Math.abs(p.aim - want) > 0.04) { ift.step(1, ['fire', p.aim < want ? 'up' : 'down']); log.frames++; }
+          else { ift.step(1, []); log.frames++; }
+          continue;
+        }
+        // Lions and soldiers a captain calls in: turn on any that comes close.
+        let add = null;
+        for (const sd of g().soldiers) if (sd.state !== 'dying' && Math.abs(sd.cx - p.cx) < 110 && Math.abs(sd.y - p.y) < 50 && (!add || Math.abs(sd.cx - p.cx) < Math.abs(add.cx - p.cx))) add = sd;
+        if (add) {
+          const d2 = add.cx > p.cx ? 1 : -1, k2 = [];
+          if (p.face !== d2) { ift.step(1, [d2 > 0 ? 'right' : 'left']); log.frames++; continue; }
+          if ((add.state === 'windup' || add.state === 'thrust') && p.onGround && !g().input.held.jump) k2.push('jump'); else if (!p.onGround && p.vy < 0) k2.push('jump');
+          if (Math.abs(add.cx - p.cx) < 60 && wallBehind > 30) k2.push(d2 > 0 ? 'left' : 'right');
+          if (!(p.charge >= (add.kind === 'heavy' ? 1 : 0.55))) k2.push('fire');
+          ift.step(1, k2); log.frames++; continue;
+        }
+        // Goliath: get close, hop, drop on the ground beside him with Lion's Fall, then sling at his brow while he kneels.
+        if (opts.pound && b.cfg.giant && b.state !== 'stagger') {
+          if (b.stunCool <= 0 && (b.state === 'idle' || b.state === 'recover' || b.state === 'tele')) {
+            const k3 = [];
+            if (adx > 46) k3.push(toward);
+            if (adx < 70 && p.onGround && !g().input.held.jump) k3.push('jump');
+            else if (!p.onGround && !p.pounding && p.vy > -260) { ift.step(1, [...k3, 'down']); ift.step(1, [...k3, 'down', 'jump']); log.frames += 2; continue; }
+            else if (!p.onGround && p.vy < 0) k3.push('jump');
+            ift.step(1, k3); log.frames++; continue;
+          }
+        }
+        if (opts.pound && b.cfg.giant && b.state === 'stagger') {
+          const k4 = [];
+          if (p.face !== dir) { ift.step(1, [toward]); log.frames++; continue; }
+          if (adx < 50) k4.push(away);
+          if (!(p.charge >= 1)) k4.push('fire');
+          ift.step(1, k4); log.frames++; continue;
+        }
         if (opts.extra) opts.extra({ b, p, keys, dir, adx });
         if (p.face !== dir) { ift.step(1, [toward]); log.frames++; continue; }        // let go and turn to face him
         const open = b.state === 'recover' || b.state === 'stagger' || b.state === 'idle' || b.state === 'tele';
@@ -66,6 +117,17 @@ function installBot() {
       }
       log.endHp = g().player.hp; log.dead = g().player.dead; log.won = !g().boss || g().boss.state === 'dying';
       return log;
+    },
+    // Would a full-charge stone loosed now at this aim angle pass through the target's box?
+    wouldHit(ang, target) {
+      const p = g().player, m = p.muzzle();
+      let x = m.x, y = m.y, vx = Math.cos(ang) * 470 * p.face, vy = -Math.sin(ang) * 470;
+      for (let i = 0; i < 120; i++) {
+        vy += 430 / 60; x += vx / 60; y += vy / 60;
+        if (x > target.x - 2 && x < target.x + target.w + 2 && y > target.y && y < target.y + target.h) return true;
+        if (g().room.solid(Math.floor(x / 16), Math.floor(y / 16))) return false;
+      }
+      return false;
     },
     // Hold fire for n frames with extra keys, then release. Returns the state after release.
     shoot(n, extra = []) { ift.step(n, ['fire', ...extra]); return ift.step(1, extra); },
