@@ -94,7 +94,17 @@ const ORDER = ['dash', 'double', 'climb', 'pound', 'sword', 'shield', 'grapple',
     t.ok(got.half === got.hp0 && got.full === got.hp0 - 3, "a heavy's tower shield turns a half-charged stone; a full charge gets through", got);
     await h.shot('m3-heavy');
     await setup(3, 4, 'thicket');
-    got = await ev(() => { const g = __ift.game, p = g.player, lion = g.soldiers.filter((x) => x.kind === 'lion').sort((a, b) => a.x - b.x)[0]; g.soldiers = [lion]; p.x = lion.x - 70; p.y = lion.y + lion.h - 22; __ift.step(1, []); let leapt = false; for (let i = 0; i < 300 && p.hp === p.maxHp; i++) { __ift.step(1, []); if (lion.state === 'thrust' && !lion.onGround) leapt = true; } return { leapt, hp: p.hp, max: p.maxHp, marked: lion.marked }; });
+    got = await ev(() => {
+      const g = __ift.game, p = g.player; let leapt = false, marked = false;
+      // Try each lion from each side until one has a clear run at David (mounds and ditches can lie between).
+      const lions = g.soldiers.filter((x) => x.kind === 'lion'); marked = lions.some((l) => l.marked);
+      for (const lion of lions) for (const side of [-1, 1]) {
+        if (leapt || p.hp < p.maxHp) break;
+        g.soldiers = [lion]; lion.x = lion.home.x; lion.y = lion.home.y; lion.state = 'patrol'; p.x = lion.x + side * 60; p.y = lion.y + lion.h - 22; p.vx = p.vy = 0;
+        for (let i = 0; i < 220 && p.hp === p.maxHp; i++) { __ift.step(1, []); if (lion.state === 'thrust' && !lion.onGround) leapt = true; }
+      }
+      return { leapt, hp: p.hp, max: p.maxHp, marked };
+    });
     t.ok(got.leapt && got.hp < got.max && !got.marked, 'a lion of Timnah pounces; lions are never marked', got);
     await h.shot('m3-lion');
   }

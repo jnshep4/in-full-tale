@@ -7,6 +7,7 @@
 //   - a climb tower must top out 9+ rows above every footing within 22 columns;
 //   - a ring perch must be 23+ columns from any tall wall, tower or hut.
 import { RB } from '../world/build.js';
+import { hash2 } from '../core.js';
 
 // A sealed hut, 9 wide, entered through a 3-high gate of tile `ch`. Planks either side reach its roof.
 export function hut(b, x, gT, ch, kind = 'M', flip = false) {
@@ -49,6 +50,35 @@ export function moat(b, x, gT) { b.fill(x, gT, x + 5, gT + 2, '~').fill(x + 2, 0
 
 export const seg = (w, top, items = {}) => ({ w, top, items });
 
+// Breaks up the flat ground between set pieces: shallow ditches, low mounds, two-wide stake pits,
+// planks overhead. Chosen by a fixed hash, so a room is the same every time. Only open ground well
+// clear of soldiers' posts, doors and hollows is touched; mounds and planks (which give height)
+// are kept 26 columns from any declared gate, so they cannot help anyone past one.
+function vary(b, segs, seed) {
+  const cell = (x, y) => (y < 0 || y >= b.h || x < 0 || x >= b.w ? '#' : b.g[y][x]);
+  const open = (x, g) => {
+    for (let dy = 1; dy <= 5; dy++) if (cell(x, g - dy) !== '.') return false;        // nothing standing or hanging here
+    for (let dy = 0; dy <= 6; dy++) if (cell(x, g + dy) !== '#') return false;        // solid ground beneath, no cellar or channel
+    if (b.backs.some(([x0, y0, x1, y1]) => x >= x0 - 2 && x <= x1 + 2 && g - 1 >= y0 - 6 && g - 1 <= y1 + 6)) return false;
+    return !b.links.some((l) => Math.abs(l.cx - x) < 5);
+  };
+  for (const s of segs) {
+    const g = s.top;
+    for (let x = s.x0 + 3; x <= s.x0 + s.w - 6; x++) {
+      let free = true;
+      for (let k = 0; k <= 3 && free; k++) free = open(x + k, g);
+      if (!free) continue;
+      const r = hash2(x, g, seed), v = hash2(x, g, seed + 9), high = !b.gates.some((q) => Math.abs(q.cx - x) < 28);
+      if (r < 0.22) b.clear(x + 1, g, x + 2, g + (v < 0.5 ? 0 : 1));                                   // ditch, one or two deep
+      else if (r < 0.34) b.fill(x + 1, g, x + 2, g, '^');                                              // stake pit
+      else if (r < 0.54 && high) b.fill(x + 1, g - (v < 0.5 ? 1 : 2), x + 2, g - 1);                   // mound
+      else if (r < 0.72 && high) b.plank(x, x + 3, g - 3);                                             // plank overhead
+      else continue;
+      x += 5;
+    }
+  }
+}
+
 // o: { L: [linkId, to], R: [linkId, to], roof: rows of solid ceiling (a cave), opts: extra room fields }
 export function room(id, name, h, segs, o = {}) {
   const w = segs.reduce((a, s) => a + s.w, 0);
@@ -77,6 +107,7 @@ export function room(id, name, h, segs, o = {}) {
       else if (k === 'prop') each((a) => b.prop(a[0], X + a[1], g - 1, a[2] || {}));
     }
   }
+  if (!o.plain) vary(b, segs, id.length * 131 + w + h * 7 + segs.length);
   if (o.L) b.exit('L', o.L[0], segs[0].top - 1, o.L[1]);
   if (o.R) b.exit('R', o.R[0], segs[segs.length - 1].top - 1, o.R[1]);
   return b.done();
