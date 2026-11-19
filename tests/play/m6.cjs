@@ -31,8 +31,8 @@ const { checker, SHOTS } = require('./helpers.cjs');
   await page.tap('#card button'); await page.waitForTimeout(700);
   let s = await ev(() => __ift.state());
   let pages = 0;
-  while (s.card === 'intro' && pages < 4) { pages++; if (pages === 3) await shot('m6-intro'); await page.tap('#card button'); await page.waitForTimeout(700); s = await ev(() => __ift.state()); }
-  t.ok(s.card === null && pages === 3, 'tapping Begin shows the three opening verses, then starts the game', [s.card, pages]);
+  while (s.card === 'intro' && pages < 5) { pages++; if (pages === 3) await shot('m6-intro'); await page.tap('#card button'); await page.waitForTimeout(700); s = await ev(() => __ift.state()); }
+  t.ok(s.card === null && pages === 4, 'tapping Begin shows the three opening verses and the dowry card, then starts the game', [s.card, pages]);
   await page.waitForTimeout(300); await shot('m6-guide');
   const audio = await ev(() => __ift.game.sfx.ctx && __ift.game.sfx.ctx.state);
   t.ok(audio === 'running', 'the first touch starts the sound', audio);

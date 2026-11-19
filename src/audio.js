@@ -33,7 +33,7 @@ export class Sfx {
     if (!this.seq) this.seq = this.buildSeq();
     const SCALE = [0, 1, 4, 5, 7, 8, 10], ROOTS = [0, 0, 2, -2, 3, -3, 5, 0, 2, -2, -4];
     const root = 146.83 * Math.pow(2, (ROOTS[this.key] || 0) / 12);
-    const stepLen = this.mode === 'boss' ? 0.2 : this.mode === 'camp' ? 0.42 : 0.3;
+    const stepLen = this.mode === 'boss' ? 0.15 : this.mode === 'camp' ? 0.42 : 0.3;
     const freq = (deg) => root * Math.pow(2, Math.floor(deg / 7) + SCALE[((deg % 7) + 7) % 7] / 12);
     if (this.nextT < c.currentTime) this.nextT = c.currentTime + 0.05;
     // Four bars of 16 steps. The bass walks a slow progression (first, fourth, second, first degree);
@@ -42,13 +42,20 @@ export class Sfx {
     const PROG = [0, 3, 1, 0], voice = ['lyre', 'lyre', 'lyre', 'pipe', 'flute', 'lyre', 'pipe', 'flute', 'lyre', 'pipe', 'flute'][this.key] || 'lyre';
     while (this.nextT < c.currentTime + 0.25) {
       const n = this.stepN % 64, i = n % 32, bar = Math.floor(n / 16), t0 = this.nextT, deg = this.seq[i], ch = PROG[bar];
-      const lead = (f, len, v) => (voice === 'lyre' || this.mode === 'boss' ? this.pluck(f, t0, len, v) : this.wind(f, t0, len * 0.9, v * 0.7, voice === 'pipe'));
+      const boss = this.mode === 'boss';
+      const lead = (f, len, v) => (boss ? (this.wind(f / 2, t0, 0.26, v * 0.8, true), this.pluck(f, t0, len, v * 0.6)) : voice === 'lyre' ? this.pluck(f, t0, len, v) : this.wind(f, t0, len * 0.9, v * 0.7, voice === 'pipe'));
       if (deg !== null) lead(freq(deg) * 2, this.mode === 'boss' ? 0.3 : 0.7, i % 4 === 0 ? 0.11 : 0.075);
       if (n >= 32 && deg !== null && i % 2 === 0) this.pluck(freq(deg + 2) * 2, t0, 0.5, 0.04);        // the answering voice
-      if (i % 8 === 0) this.pluck(freq(ch) / 2, t0, 1.6, 0.1);                                        // bass string
+      // A captain's ground: a driving bass on every other step that leans on the flat second, a low
+      // string tolling each bar, a reed holding the flat second under it, and the drum on every step.
+      if (boss) {
+        if (i % 2 === 0) this.pluck(freq(i % 8 === 6 ? ch + 1 : ch) / 2, t0, 0.3, 0.09);
+        if (n % 16 === 0) this.pluck(freq(ch) / 4, t0, 2.4, 0.15);
+        if (n % 16 === 8) this.wind(freq(ch + 1) / 2, t0, stepLen * 7, 0.03, true);
+      } else if (i % 8 === 0) this.pluck(freq(ch) / 2, t0, 1.6, 0.1);                                 // bass string
       else if (i % 8 === 4 && this.mode !== 'camp') this.pluck(freq(ch + 4) / 2, t0, 0.8, 0.05);
       if (n % 16 === 0) { this.drone(freq(ch) / 2, t0, stepLen * 16); if (this.mode !== 'boss') this.wind(freq(ch + 2), t0, stepLen * 15, 0.018, true); }
-      if (this.mode === 'boss') { if (i % 4 === 0) this.drum(t0, 0.5); else if (i % 4 === 2 || i % 8 === 7) this.drum(t0, 0.22); if (i % 16 === 12) this.rattle(t0); }
+      if (boss) { this.drum(t0, i % 4 === 0 ? 0.55 : i % 8 >= 6 ? 0.32 : i % 2 ? 0.1 : 0.2); if (i % 8 === 4) this.rattle(t0); }
       else if (this.mode === 'field') { if (i % 8 === 4) this.drum(t0, 0.12); if (i % 16 === 14) this.drum(t0, 0.07); if (i % 8 === 0) this.rattle(t0, 0.02); }
       this.nextT += stepLen; this.stepN++;
     }

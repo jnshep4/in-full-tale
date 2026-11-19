@@ -20,6 +20,22 @@ import { Player, SLING } from './ent/player.js';
 import { Soldier } from './ent/soldier.js';
 import { Trophy } from './ent/trophy.js';
 
+// Tips for the first field: [from column, to column, keyboard text, touch text]. '|' breaks a line.
+const TIPS = [
+  [0, 9, 'MOVE: ARROWS   JUMP: Z   SLING: HOLD X, RELEASE', 'MOVE: LEFT STICK   SLING: HOLD THE BUTTON, THEN LET GO'],
+  [9, 20, 'ON A PLATFORM: HOLD DOWN AND PRESS JUMP TO DROP THROUGH IT', 'ON A PLATFORM: HOLD THE STICK DOWN AND TAP JUMP TO DROP THROUGH IT'],
+  [20, 36, 'HOLD THE SLING LONGER FOR MORE POWER.|A LIGHT STONE GLANCES OFF A SHIELD; A FULL ONE BREAKS THROUGH', 'HOLD THE SLING LONGER FOR MORE POWER.|A LIGHT STONE GLANCES OFF A SHIELD; A FULL ONE BREAKS THROUGH'],
+  [36, 58, 'THE STONE FLIES LEVEL AND FALLS SHORT.|CLOSE IN, OR JUMP AND LOOSE IT IN THE AIR', 'THE STONE FLIES LEVEL AND FALLS SHORT.|CLOSE IN, OR JUMP AND LOOSE IT IN THE AIR'],
+];
+// Narration, not scripture: the last of the opening cards.
+const DOWRY_LINE = 'Go, and collect your dowry: a hundred trophies of the Philistines.';
+// Crossed spears over a door while a captain stands: no way out but through him.
+function drawBars(g, x, y) {
+  g.fillStyle = '#5a3a1e'; for (let i = 0; i < 26; i++) { g.fillRect(x - 13 + i, y - 30 + i, 2, 2); g.fillRect(x + 11 - i, y - 30 + i, 2, 2); }
+  g.fillStyle = '#d8a04a'; g.fillRect(x - 15, y - 33, 3, 4); g.fillRect(x + 12, y - 33, 3, 4);
+  g.fillStyle = '#c98b3f'; g.fillRect(x - 2, y - 19, 4, 4);
+}
+
 function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; }
 
 export class Game {
@@ -74,7 +90,7 @@ export class Game {
     this.save.flags.intro = 1; this.persist();
     if (!fresh) return;
     const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    this.ui.scene('intro', INTRO_VERSES.map((v) => ({ text: [], html: `<div class="orn"></div><p class="verse-text small">${esc(v.text)}</p><p class="verse-ref"><span class="ref">${v.ref}</span> <span class="tag">${VERSION_TAG}</span></p>` })),
+    this.ui.scene('intro', INTRO_VERSES.map((v) => ({ text: [], html: `<div class="orn"></div><p class="verse-text small">${esc(v.text)}</p><p class="verse-ref"><span class="ref">${v.ref}</span> <span class="tag">${VERSION_TAG}</span></p>` })).concat([{ text: [], html: `<div class="orn"></div><p class="verse-text small">${DOWRY_LINE}</p>` }]),
       [{ label: 'Begin', value: 'ok' }], () => this.banner2(this.touch ? 'GO RIGHT TO THE FIRST GATEWAY AND PUSH UP' : 'GO RIGHT TO THE FIRST GATEWAY AND PRESS UP', 6));
   }
   // Until the Valley of Elah has been entered once, an arrow shows the way to its gateway.
@@ -273,6 +289,14 @@ export class Game {
     }
     this.sfx.play('break'); this.shake = Math.max(this.shake, 4); this.persist();
   }
+  // The first field teaches as David walks it: one short tip for each stretch of ground, until the
+  // first captain has fallen.
+  tip() {
+    if (this.region.id !== 1 || this.room.id !== 'outskirts' || this.flag('boss1') || this.ui.cur || this.player.dead) return null;
+    const c = this.player.cx / T, k = this.touch ? 1 : 0;
+    for (const t of TIPS) if (c >= t[0] && c < t[1]) return t[2 + k];
+    return null;
+  }
   bossActive() { return !!this.boss && !this.boss.gone; }
   doorState(l) {
     if (l.after && !this.flag('boss' + l.after)) return 'hidden';
@@ -452,7 +476,7 @@ export class Game {
       const side = p.cx < 0 ? 'L' : 'R', cy = Math.floor((p.y + p.h - 1) / T);
       let best = null;
       for (const l of room.links) if (l.kind === 'edge' && l.side === side && (!best || Math.abs(l.cy - cy) < Math.abs(best.cy - cy))) best = l;
-      if (best && parseTo(best.to, this.region.id)) { this.go(best); return true; }
+      if (best && !this.bossActive() && parseTo(best.to, this.region.id)) { this.go(best); return true; }
       p.x = clamp(p.x, 0, room.w * T - p.w);
     }
     this.nearDoor = null;
@@ -509,7 +533,7 @@ export class Game {
       if (k < REED || xx < 0 || xx >= this.room.w) continue;
       if (k === WATER) water.push(xx, yy); else drawGate(w, k, xx * T - cx, yy * T - cy, xx, yy, t, this.room);
     }
-    for (const l of this.room.links) if (l.kind === 'door') { const st = this.doorState(l); if (st !== 'hidden' && on(l.cx * T, l.cy * T, 60)) drawDoor(w, l, l.cx * T + 8 - cx, (l.cy + 1) * T - cy, st, t); }
+    for (const l of this.room.links) if (l.kind === 'door') { const st = this.doorState(l); if (st !== 'hidden' && on(l.cx * T, l.cy * T, 60)) drawDoor(w, l, l.cx * T + 8 - cx, (l.cy + 1) * T - cy, st, t); if (st !== 'hidden' && this.bossActive()) drawBars(w, l.cx * T + 8 - cx, (l.cy + 1) * T - cy); }
     for (const q of this.room.props) {
       if (!on(q.cx * T, q.cy * T, 60)) continue;
       if (q.type === 'guard') drawIsraelite(w, q.cx * T + 8 - cx, (q.cy + 1) * T - cy, q.face || 1, t, q.cx);
@@ -658,10 +682,12 @@ export class Game {
       ctx.fillStyle = b.flash > 0 ? '#ffffff' : '#d8362e'; ctx.fillRect(bx, by, Math.round(bw * f), 4); ctx.fillStyle = '#ff9a7a'; ctx.fillRect(bx, by, Math.round(bw * f), 1);
       ctx.fillStyle = '#ffd680'; ctx.fillRect(bx + bw / 2, by - 1, 1, 6);
     }
-    if (this.save.played < 30 && !this.boss && !this.touch) {
-      const s = 'MOVE: ARROWS   JUMP: Z   SLING: HOLD X, RELEASE';
-      ctx.globalAlpha = clamp(30 - this.save.played, 0, 1) * 0.9;
-      drawText(ctx, s, Math.round((W - textWidth(s)) / 2), H - 14, '#d9cba8', 1);
+    const tip = this.tip();
+    if (tip) {
+      const lines = tip.split('|'), wd = Math.max(...lines.map((l) => textWidth(l))), y0 = H - (this.touch ? 62 : 16) - lines.length * 9;
+      ctx.globalAlpha = 0.6; ctx.fillStyle = '#0b0812'; ctx.fillRect(Math.round((W - wd) / 2) - 5, y0 - 4, wd + 10, lines.length * 9 + 6);
+      ctx.globalAlpha = 1;
+      lines.forEach((l, i) => drawText(ctx, l, Math.round((W - textWidth(l)) / 2), y0 + i * 9, '#f0e2bd', 1));
       ctx.globalAlpha = 1;
     }
   }

@@ -11,9 +11,9 @@ Provisional: Claude estimated it on 2026-11-18 from the session's own rate-limit
 - **Optional, from James:** a line under "Readings from James" with the Fable weekly percentage after this run, if a later run is ever wanted. See "Calibration" for what the telemetry said.
 - **Known bugs and rough edges** (none blocks play):
   - Gamepad support is written to the standard mapping but has never been tried with a physical pad: this environment has none.
-  - The control hint bar shows for the first 30 seconds of play time on a save and lists only the starting controls; each power's card and the pause sheet give the rest.
+  - Tips show only in the first field, until the first captain falls; each power's card and the pause sheet give the rest.
   - Captains can be fought from high planks, walls, rings, or the cistern, out of reach of thrusts and ground waves. They stand off, leap up to 8 tiles, throw, and shake a clinging David off the wall (at most every 7 seconds). Maroz from the wall and Yishvar from the cistern remain the safest fights; that is where their weaknesses point.
-  - The music is generated and simple: one plucked line, a drone, a drum under captains.
+  - The music is generated and simple: one plucked line, a drone; a faster, darker arrangement under captains (see the 2026-11-19 section). Nobody has listened to it.
   - No human has played it. Every check was made by script and by looking at screenshots.
 - **This run's meter total:** 7,734,097 units of the 18,900,000 budget (stop line 17,010,000). Telemetry: `seven_day` 8% at start, 12% at the end; `seven_day_overage_included` 9% at start, 16% at the end.
 - **Estimated runs remaining:** none.
@@ -67,6 +67,14 @@ Meter at this point: 12,965,939 units of the 17,010,000 stop line.
 - James described the card as "David asking for Saul's daughter". In the text David does not ask: Michal loves him, Saul's servants put it to him, he answers that he is a poor man, and Saul names the price. The cards follow the text.
 - Until the Valley of Elah has been entered once, a bobbing arrow marks gateway 1 in the camp ("THIS WAY" at the screen's right edge while the gateway is off screen, then an arrow over the gateway itself), and a line of advice shows after the cards. `drawGuide` in `src/game.js`.
 
+## Tips, dowry card, captain's music, barred doors (2026-11-19, at James's request)
+
+- **Tips in the first field.** `TIPS` in `src/game.js` lists column ranges of `1/outskirts` with keyboard and touch text; `tip()` picks one by David's column and `drawHud` draws it in a dark box at the bottom. Four tips: moving and the sling (columns 0-9), Down + Jump to drop through a platform (9-20, around the practice plank), hold for more power and what a shield does (20-36), the stone flies level and short (36-58). They show until the first captain falls (`boss1`). This replaces the old 30-second hint bar.
+- **Fourth opening card.** After the three verse cards: "Go, and collect your dowry: a hundred trophies of the Philistines." (`DOWRY_LINE`). It is narration, not scripture, so it carries no reference and is worded in modern English on purpose.
+- **Captain's music.** In `music()`, boss mode now steps every 0.15 s (was 0.2), plays the tune on a low reed with a quiet string above, drives a bass on every other step that leans on the flat second, tolls a low string each bar, holds a reed on the flat second, and drums every step. Checked only by the mode switch in m5; nobody has listened to it.
+- **No leaving a captain's ground.** Doors were already refused while a captain stands (`useDoor`). Now crossed spears are drawn over every door in the room (`drawBars`), and `checkLinks` refuses edge exits too (no captain's room has one today). Quitting to the title from the pause sheet is still allowed.
+- Tests: m5 33, m6 20, m1 39, m2 42, `npm test` all pass. m3 and m4 were not rerun (budget); nothing they cover was changed except the captain's music and the edge-exit guard.
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
@@ -116,6 +124,8 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | map, music, hand-built regions 5, 6, 8, 9, 10 (read just before committing) | 10,761,823 |
 | 2 | hand-built regions 2, 3, 4, 7 (read just before committing) | 11,289,440 |
 | 2 | phone demo: touch controls, fit, demo mode (read just before committing) | 12,965,939 |
+| 2 | opening verse cards and first-gateway arrow | 14,218,873 |
+| 2 | tips, dowry card, captain's music, barred doors (read just before committing) | 15,493,763 |
 
 ## Calibration
 

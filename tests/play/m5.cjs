@@ -20,6 +20,9 @@ const { launch, checker } = require('./helpers.cjs');
   await step(1, ['confirm']); s = await step(5);
   const intro = [];
   for (let i = 0; i < 3 && s.card === 'intro'; i++) { intro.push(await ev(() => { const el = document.querySelector('#card'); return [el.querySelector('.verse-text').textContent, el.querySelector('.verse-ref').textContent]; })); if (i === 2) await h.shot('m5-intro'); await step(40); await step(1, ['confirm']); s = await step(5); }
+  const dowry = s.card === 'intro' ? await ev(() => { const el = document.querySelector('#card'); return [el.querySelector('.verse-text').textContent, !!el.querySelector('.verse-ref')]; }) : null;
+  await h.shot('m5-intro-dowry'); await step(40); await step(1, ['confirm']); s = await step(5);
+  t.ok(dowry && /collect your dowry/.test(dowry[0]) && !dowry[1], 'a fourth card, with no verse reference, sends him to collect his dowry', dowry);
   const want = await ev(async () => (await import('/src/data/verses.js')).INTRO_VERSES);
   t.ok(intro.length === 3 && intro.every((p, i) => p[0] === want[i].text && p[1] === want[i].ref + ' (KJV)') && /an hundred foreskins of the Philistines/.test(intro[2][0]), 'a new game opens on three cards of 1 Samuel 18 (KJV): Michal, David\'s answer, the price', intro.map((p) => p[1]));
   const guide = await ev(() => { const g = __ift.game; let called = 0; const o = g.drawGuide.bind(g); g.drawGuide = (...a) => { called++; return o(...a); }; g.render(); delete g.drawGuide; return { called, seen: !!g.save.seen['1/outskirts'], note: g.note.text }; });
@@ -27,6 +30,19 @@ const { launch, checker } = require('./helpers.cjs');
   await step(30); await h.shot('m5-guide-arrow'); await ev(() => { const g = __ift.game; g.player.x = 34 * 16; g.snapCamera(); }); await step(5); await h.shot('m5-guide-gate');
   await ev(() => { const g = __ift.game; g.player.x = 14 * 16 + 3; g.snapCamera(); }); await step(2);
   t.ok(s.card === null && s.region === 0, "Begin starts in Saul's camp", [s.card, s.region]);
+  {
+    const tips = await ev(() => { const g = __ift.game, was = [g.region.id, g.room.id, g.player.x]; g.loadRoom(1, 'outskirts'); const out = [];
+      for (const c of [5, 13, 28, 45, 70]) { g.player.x = c * 16; out.push(g.tip()); } g.touch = true; g.player.x = 13 * 16; out.push(g.tip()); g.touch = false;
+      g.player.x = 13 * 16; g.snapCamera(); g.render(); return out; });
+    await step(40);
+    await h.shot('m5-tip');
+    t.ok(/JUMP: Z/.test(tips[0]) && /HOLD DOWN AND PRESS JUMP/.test(tips[1]) && /MORE POWER/.test(tips[2]) && /LEVEL/.test(tips[3]) && tips[4] === null && /STICK DOWN AND TAP JUMP/.test(tips[5]), 'the first field shows tips: moving, dropping through a platform, sling power, sling range', tips);
+    const bars = await ev(() => { const g = __ift.game; g.loadRoom(1, 'arena'); g.snapCamera(); g.render(); const p = g.player, x0 = p.x; p.x = -40; g.checkLinks(); return { boss: g.bossActive(), room: g.room.id, music: g.sfx.mode, moved: p.x !== x0 }; });
+    await step(40);
+    await h.shot('m5-arena-bars');
+    t.ok(bars.boss && bars.room === 'arena' && bars.music === 'boss', "a captain's ground bars its doors and plays the captain's music", bars);
+    await ev(() => { const g = __ift.game; g.loadRoom(0, 'camp'); g.player.x = 14 * 16 + 3; g.snapCamera(); });
+  }
 
   console.log('pause sheet');
   await step(90, ['right']);
@@ -88,7 +104,7 @@ const { launch, checker } = require('./helpers.cjs');
   await step(30); await step(1, ['confirm']); s = await step(3);
   t.ok(s.card === null && s.tally === 3 && s.powers.includes('dash'), 'Continue resumes the saved tale', [s.tally, s.powers]);
   await h.reload(); await step(40); await step(1, ['right']); await step(2); await step(1, ['confirm']); await step(40); await step(1, ['right']); await step(2); await step(1, ['confirm']); s = await step(5);
-  for (let i = 0; i < 3 && s.card === 'intro'; i++) { await step(40); await step(1, ['confirm']); s = await step(5); }
+  for (let i = 0; i < 4 && s.card === 'intro'; i++) { await step(40); await step(1, ['confirm']); s = await step(5); }
   t.ok(s.card === null && s.tally === 0 && s.powers.length === 0, 'Erase and begin starts a fresh tale', [s.card, s.tally, s.powers]);
   t.ok(h.errors.length === 0, 'no page errors', h.errors);
   await h.close();
