@@ -28,9 +28,12 @@ const { checker, SHOTS } = require('./helpers.cjs');
   t.ok(/Demo/.test(fit.card) && /Left thumb/.test(fit.card) && !/WASD/.test(fit.card), 'the title says Demo and explains the touch controls, not the keyboard', fit.card);
   t.ok(fit.turn === 'none', 'no "turn your phone" prompt in landscape');
   await shot('m6-title');
-  await page.tap('#card button'); await page.waitForTimeout(400);
+  await page.tap('#card button'); await page.waitForTimeout(700);
   let s = await ev(() => __ift.state());
-  t.ok(s.card === null, 'tapping Begin starts the game', s.card);
+  let pages = 0;
+  while (s.card === 'intro' && pages < 4) { pages++; if (pages === 3) await shot('m6-intro'); await page.tap('#card button'); await page.waitForTimeout(700); s = await ev(() => __ift.state()); }
+  t.ok(s.card === null && pages === 3, 'tapping Begin shows the three opening verses, then starts the game', [s.card, pages]);
+  await page.waitForTimeout(300); await shot('m6-guide');
   const audio = await ev(() => __ift.game.sfx.ctx && __ift.game.sfx.ctx.state);
   t.ok(audio === 'running', 'the first touch starts the sound', audio);
 

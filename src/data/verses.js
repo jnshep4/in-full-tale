@@ -15,3 +15,12 @@ export const REGION_VERSES = [
 export const VERSION_TAG = '(KJV)';
 export const SWORD_VERSE = { ref: '1 Samuel 21:9', text: 'There is none like that; give it me.' };
 export const ENDING_B_VERSE = { ref: '1 Samuel 18:27', text: "and they gave them in full tale to the king, that he might be the king's son in law." };
+
+// Shown on a new game: 1 Samuel 18:20, 18:22-23 and 18:25 (KJV). Copied by script on 2026-11-19 from a
+// public KJV text (github.com/aruljohn/Bible-kjv, 1Samuel.json), not typed; that file's verse 27 agrees
+// with BRIEF.md's quotation of it. These verses are not in BRIEF.md, so no test can check them against it.
+export const INTRO_VERSES = [
+  { ref: '1 Samuel 18:20', text: 'And Michal Saul\'s daughter loved David: and they told Saul, and the thing pleased him.' },
+  { ref: '1 Samuel 18:22-23', text: 'And Saul commanded his servants, saying, Commune with David secretly, and say, Behold, the king hath delight in thee, and all his servants love thee: now therefore be the king\'s son in law. And Saul\'s servants spake those words in the ears of David. And David said, Seemeth it to you a light thing to be a king\'s son in law, seeing that I am a poor man, and lightly esteemed?' },
+  { ref: '1 Samuel 18:25', text: 'And Saul said, Thus shall ye say to David, The king desireth not any dowry, but an hundred foreskins of the Philistines, to be avenged of the king\'s enemies. But Saul thought to make David fall by the hand of the Philistines.' },
+];

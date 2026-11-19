@@ -8,7 +8,7 @@ import { parseRoom, moveBody, AIR, REED, WATER, RING, GATE_POWER } from './world
 import { parseTo } from './world/build.js';
 import { BOSSES } from './data/bosses.js';
 import { POWERS } from './data/powers.js';
-import { ENDING_B_VERSE, VERSION_TAG } from './data/verses.js';
+import { ENDING_B_VERSE, VERSION_TAG, INTRO_VERSES } from './data/verses.js';
 import { Boss } from './ent/boss.js';
 import { UI } from './ui.js';
 import { drawGate, drawWater, drawDoor, drawProp, drawRelic } from './gfx/props.js';
@@ -62,9 +62,42 @@ export class Game {
     this.ui.show({ kind: 'title', buttons, sound: 'select', quick: true,
       html: `<h1>In Full Tale</h1><div class="orn"></div><p class="say">David, a sling, and the price King Saul has set.</p>${this.demo ? '<p class="kicker">Demo</p>' : ''}<p class="how">${this.touch ? 'Left thumb moves David: push up at a gateway to go in. JUMP jumps. Hold SLING and let go to loose a stone: it flies level and not far, so close in and jump to reach. The II button opens the tally sheet, map and settings.' : `Arrows or WASD to move. Z or Space to jump. Hold X to whirl the sling, release to loose: it flies level and not far, so close in and jump to reach. Up at a gateway to enter. Esc for the tally sheet and settings.`}</p>`,
       onClose: (v) => {
+        if (v === 'go') this.intro();
         if (v === 'set') this.settingsMenu(() => this.title());
-        else if (v === 'new') this.ui.show({ kind: 'title', quick: true, sound: 'select', html: '<h2>Begin again?</h2><p class="say">The saved tale will be erased.</p>', buttons: [{ label: 'Back', value: 'back' }, { label: 'Erase and begin', value: 'erase' }], onClose: (w) => { if (w === 'erase') { this.resetSave(); this.hadSave = false; } else this.title(); } });
+        else if (v === 'new') this.ui.show({ kind: 'title', quick: true, sound: 'select', html: '<h2>Begin again?</h2><p class="say">The saved tale will be erased.</p>', buttons: [{ label: 'Back', value: 'back' }, { label: 'Erase and begin', value: 'erase' }], onClose: (w) => { if (w === 'erase') { this.resetSave(); this.hadSave = false; this.intro(); } else this.title(); } });
       } });
+  }
+  // A new game opens on the text itself: Michal, David's answer, and the price Saul names.
+  intro() {
+    if (this.flag('intro')) return;
+    const fresh = this.save.played < 2 && this.save.tally === 0 && !this.save.powers.length;      // not for a game already under way
+    this.save.flags.intro = 1; this.persist();
+    if (!fresh) return;
+    const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    this.ui.scene('intro', INTRO_VERSES.map((v) => ({ text: [], html: `<div class="orn"></div><p class="verse-text small">${esc(v.text)}</p><p class="verse-ref"><span class="ref">${v.ref}</span> <span class="tag">${VERSION_TAG}</span></p>` })),
+      [{ label: 'Begin', value: 'ok' }], () => this.banner2(this.touch ? 'GO RIGHT TO THE FIRST GATEWAY AND PUSH UP' : 'GO RIGHT TO THE FIRST GATEWAY AND PRESS UP', 6));
+  }
+  // Until the Valley of Elah has been entered once, an arrow shows the way to its gateway.
+  drawGuide(ctx, cx, cy) {
+    if (this.region.id !== 0 || this.save.seen['1/outskirts']) return;
+    const l = this.room.link('d1'); if (!l) return;
+    const gx = l.cx * T + 8 - cx, gy = (l.cy + 1) * T - cy - 74, bob = Math.round(Math.sin(this.time * 5) * 3), col = Math.sin(this.time * 5) > 0 ? '#ffffff' : '#ffd680';
+    ctx.fillStyle = '#0e0a12';
+    if (gx > W - 14) {                                           // the gateway is off to the right: point that way
+      const x = W - 26 + bob, y = 150;
+      for (let i = 0; i < 9; i++) ctx.fillRect(x + 8 + i - 1, y - (8 - i) - 1, 3, (8 - i) * 2 + 3);
+      ctx.fillRect(x - 9, y - 4, 18, 9);
+      ctx.fillStyle = col; for (let i = 0; i < 8; i++) ctx.fillRect(x + 8 + i, y - (7 - i), 1, (7 - i) * 2 + 1);
+      ctx.fillRect(x - 8, y - 3, 16, 7);
+      drawText(ctx, 'THIS WAY', x - 30, y + 14, col, 1);
+    } else if (gx > -14) {                                       // over the gateway: point down at it
+      const x = Math.round(gx), y = gy + bob;
+      for (let i = 0; i < 9; i++) ctx.fillRect(x - (8 - i) - 1, y + 8 + i - 1, (8 - i) * 2 + 3, 3);
+      ctx.fillRect(x - 4, y - 9, 9, 18);
+      ctx.fillStyle = col; for (let i = 0; i < 8; i++) ctx.fillRect(x - (7 - i), y + 8 + i, (7 - i) * 2 + 1, 1);
+      ctx.fillRect(x - 3, y - 8, 7, 16);
+      const s2 = this.note.t > 0 || this.nearDoor ? '' : 'START HERE'; drawText(ctx, s2, x - Math.floor(textWidth(s2) / 2), y - 18, col, 1);
+    }
   }
   pauseMenu() {
     const rows = this.tracker().map((r) => `<tr><td>${r.id}. ${r.name}</td><td>${r.got} / ${r.of}</td><td>${r.captain ? 'captain fallen' : ''}</td></tr>`).join('');
@@ -560,6 +593,7 @@ export class Game {
     }
 
     ctx.drawImage(this.vignette, 0, 0);
+    this.drawGuide(ctx, cx, cy);
     this.drawHud(ctx);
     if (this.fade > 0) { ctx.fillStyle = `rgba(7,5,11,${this.fade})`; ctx.fillRect(0, 0, W, H); }
     if (this.paused) { ctx.fillStyle = 'rgba(7,5,11,0.6)'; ctx.fillRect(0, 0, W, H); drawText(ctx, 'PAUSED', (W - textWidth('PAUSED', 3)) / 2, 120, '#f1e2c0', 3); }

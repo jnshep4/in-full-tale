@@ -60,6 +60,13 @@ Links: full game https://jnshep4.github.io/in-full-tale/ ; demo of regions 1-2 h
 
 Meter at this point: 12,965,939 units of the 17,010,000 stop line.
 
+## Opening cards and the first-gateway arrow (2026-11-19, at James's request)
+
+- A fresh game (Begin on the title, or Erase and begin) now opens on three verse cards before play: 1 Samuel 18:20, 18:22-23, and 18:25, each with its reference and "(KJV)". They are `INTRO_VERSES` in `src/data/verses.js`. A game already under way does not see them.
+- **Provenance of that text:** these verses are not in BRIEF.md, so `tests/verses.test.mjs` cannot check them. They were copied by script, not typed, from one public KJV file (github.com/aruljohn/Bible-kjv, `1Samuel.json`); a second source could not be reached from the build environment. That file's verse 27 agrees with BRIEF.md's quotation of it. James should proofread the three cards once. If he adds the verses to BRIEF.md, extend the verse test to cover them.
+- James described the card as "David asking for Saul's daughter". In the text David does not ask: Michal loves him, Saul's servants put it to him, he answers that he is a poor man, and Saul names the price. The cards follow the text.
+- Until the Valley of Elah has been entered once, a bobbing arrow marks gateway 1 in the camp ("THIS WAY" at the screen's right edge while the gateway is off screen, then an arrow over the gateway itself), and a line of advice shows after the cards. `drawGuide` in `src/game.js`.
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
