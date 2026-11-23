@@ -19,7 +19,7 @@ function camp() {
     b.door('d' + n, x, standAt(x), to, { look: 'gateway', n, needs: n > 1 ? POWERS[n - 2].id : null });
     b.put(x - 3, standAt(x), 't');
   }
-  for (const x of [6, 29, 42, 64, 75, 97, 108, 119, 141]) b.prop('tent', x, standAt(x), { v: x % 3 });
+  for (const x of [6, 42, 64, 75, 97, 108, 119, 141]) b.prop('tent', x, standAt(x), { v: x % 3 });
   for (const x of [10, 52, 86, 130]) b.prop('fire', x, standAt(x));
   for (const x of [17, 27, 58, 92, 114]) b.prop('banner', x, standAt(x));
   for (const [x, f] of [[8, 1], [19, 1], [25, -1], [50, -1], [70, 1], [88, -1], [104, 1], [128, -1]]) b.prop('guard', x, standAt(x), { face: f });

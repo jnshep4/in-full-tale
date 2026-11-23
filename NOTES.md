@@ -95,6 +95,14 @@ James said the budget had reset (message of 2026-11-23). No new figure was given
 - **Tests.** New `tests/play/m7.cjs` (16 checks): forces each captain's own attack against a David who stands still, checks the rage, the troop mix by region, and each new soldier kind. Full suite after the change: m1 39, m2 42, m3 53, m4 53, m5 38, m6 20, m7 16, `npm test` all pass. The bot still beats all ten captains.
 - Not checked: difficulty for a human. The new attacks were tuned by reasoning and by the bot, not by play.
 
+## Stores, tidied (2026-11-23, at James's request)
+
+- **Limit.** `storeCredit()`: the steward gives one thing at the start and one more for every three trophies brought in (`1 + floor(tally / 3) - save.taken`). Swapping costs a credit like any other take. With no credit the card says how many trophies until the next.
+- **Drops.** An unmarked soldier still drops a fig 35% of the time; now 5% sling oil and 5% a horn as well (one `rand()` call, as before). A dropped item is picked up only when David carries nothing; otherwise it lies there.
+- **Pause sheet** lists what he carries, the Q (or O) key, and the three-trophy rule.
+- **Tent art.** The stores door has its own look (`look: 'stores'` in `drawDoor`): plain cloth, sacks, oil jars. The camp prop tent at column 29 was removed because it covered the sacks.
+- Tests: m5 40 (two new checks), m1 39, m2 42, m3 53, m4 53, m6 20, m7 16, `npm test` pass. The prop-tent removal came after that run; only `npm test` was rerun for it.
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
@@ -148,6 +156,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | tips, dowry card, captain's music, barred doors (read just before committing) | 15,493,763 |
 | 2 | stores, items, camp talk (read just before committing) | 15,884,455 |
 | 2 | budget reset by James at 15,927,444; soldier kinds, captain attacks, m7 (read just before committing) | 16,490,116 |
+| 2 | stores limit, drops, tent art, pause-sheet line (read just before committing) | 16,811,420 |
 
 ## Calibration
 
