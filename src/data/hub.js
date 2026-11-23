@@ -13,6 +13,7 @@ function camp() {
   b.land(0, 149, 18).land(56, 149, 17).land(101, 149, 16).walls();
   b.put(14, 17, 'P');
   b.door('tent', 22, 17, null, { look: 'saul', act: 'saul', label: "SAUL'S TENT" });
+  b.door('stores', 31, 17, null, { look: 'path', act: 'stores', label: 'THE STORES' });
   for (let n = 1; n <= 10; n++) {
     const x = GATE_X(n), to = REGION_ENTRY[n] ? `${n}/${REGION_ENTRY[n]}` : null;
     b.door('d' + n, x, standAt(x), to, { look: 'gateway', n, needs: n > 1 ? POWERS[n - 2].id : null });

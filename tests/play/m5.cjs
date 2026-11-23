@@ -43,6 +43,21 @@ const { launch, checker } = require('./helpers.cjs');
     t.ok(bars.boss && bars.room === 'arena' && bars.music === 'boss', "a captain's ground bars its doors and plays the captain's music", bars);
     await ev(() => { const g = __ift.game; g.loadRoom(0, 'camp'); g.player.x = 14 * 16 + 3; g.snapCamera(); });
   }
+  {
+    const st = await ev(() => { const g = __ift.game, l = g.room.links.find((x) => x.id === 'stores'); g.player.x = l.cx * 16; g.snapCamera(); g.useDoor(l); return { card: g.ui.cur && document.querySelector('#card').dataset.kind, buttons: [...document.querySelectorAll('#card button')].map((b) => b.textContent) }; });
+    await step(5); await h.shot('m5-stores');
+    t.ok(st.card === 'stores' && st.buttons.length === 4, 'the stores in camp offer three things to carry, and Leave', st);
+    const use = await ev(() => { const g = __ift.game, out = {}; let p = g.player; g.ui.close('fig'); out.took = g.save.item; p.hp = 1; g.useItem(); out.hp = p.hp; out.left = g.save.item;
+      g.save.item = 'oil'; const c0 = g.chargeScale(); g.useItem(); out.swift = [c0, g.chargeScale()];
+      g.loadRoom(1, 'outskirts'); p = g.player; g.save.item = 'horn'; const near = g.soldiers.filter((x) => Math.abs(x.cx - p.cx) < 260); p.x = near.length ? p.x : g.soldiers[0].x - 60; g.useItem(); out.horn = g.soldiers.filter((x) => x.state === 'stagger').length; out.has = g.has('item');
+      g.loadRoom(0, 'camp'); p = g.player; const q = g.room.props.find((x) => x.type === 'guard'); p.x = q.cx * 16; out.talk0 = g.campTalk(q); g.save.flags.boss1 = 1; out.talk1 = g.campTalk(q); p.x += 200; out.far = g.campTalk(q); delete g.save.flags.boss1; g.swift = 0; p.x = q.cx * 16; g.snapCamera(); return out; });
+    await step(5); await h.shot('m5-camp-talk');
+    t.ok(use.took === 'fig' && use.hp === 4 && use.left === null, 'a cake of figs restores three hearts and is spent', use);
+    t.ok(use.swift[0] === 1 && use.swift[1] === 0.25, 'sling oil quickens the sling', use.swift);
+    t.ok(use.horn >= 1 && use.has === false, "a ram's horn staggers the soldiers near", use.horn);
+    t.ok(use.talk0 && use.talk1 && use.talk0 !== use.talk1 && use.far === null, 'the men of the camp speak to David, and speak differently once a captain has fallen', [use.talk0, use.talk1]);
+    await ev(() => { const g = __ift.game; g.player.x = 14 * 16 + 3; g.player.hp = g.player.maxHp; g.snapCamera(); });
+  }
 
   console.log('pause sheet');
   await step(90, ['right']);

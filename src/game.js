@@ -27,6 +27,21 @@ const TIPS = [
   [20, 36, 'HOLD THE SLING LONGER FOR MORE POWER.|A LIGHT STONE GLANCES OFF A SHIELD; A FULL ONE BREAKS THROUGH', 'HOLD THE SLING LONGER FOR MORE POWER.|A LIGHT STONE GLANCES OFF A SHIELD; A FULL ONE BREAKS THROUGH'],
   [36, 58, 'THE STONE FLIES LEVEL AND FALLS SHORT.|CLOSE IN, OR JUMP AND LOOSE IT IN THE AIR', 'THE STONE FLIES LEVEL AND FALLS SHORT.|CLOSE IN, OR JUMP AND LOOSE IT IN THE AIR'],
 ];
+// Things from the stores. One is carried at a time; using it spends it.
+const ITEMS = {
+  fig: { name: 'a cake of figs', what: 'restores three hearts.', used: 'THREE HEARTS RESTORED' },
+  oil: { name: 'sling oil', what: 'for twelve seconds the sling charges four times as fast.', used: 'THE SLING RUNS SWIFT' },
+  horn: { name: "a ram's horn", what: 'its blast staggers every soldier near for three seconds. Captains do not flinch.', used: 'THE HORN SOUNDS' },
+};
+// Camp talk by favor (see favor()), two lines each. Invented, not scripture.
+const CAMP_TALK = [
+  ['A HUNDRED? THE KING SETS YOU A HARD PRICE.', 'THE SHEPHERD WILL NOT COME BACK.'],
+  ['A CAPTAIN FALLEN, AND BY A SLING?', 'THE MEN ARE ASKING YOUR NAME.'],
+  ['THEY SING OF YOU IN THE TOWNS.', 'WE WOULD FOLLOW YOU OUT, SON OF JESSE.'],
+  ['ALL THE CAMP LOVES YOU. THE KING WATCHES.', 'JONATHAN SPEAKS WELL OF YOU.'],
+  ['THE LORD IS WITH YOU. EVERY MAN HERE KNOWS IT.', 'WHO CAN SAY WHAT YOU WILL BE, SON OF JESSE?'],
+];
+const SAUL_MOOD = ['', "The king's servants praise David. The king says little.", "The king's servants praise David. The king says little.", "Saul watches David closely now. The camp's love for him troubles the king.", "Saul watches David closely now. The camp's love for him troubles the king."];
 // Narration, not scripture: the last of the opening cards.
 const DOWRY_LINE = 'Go, and collect your dowry: a hundred trophies of the Philistines.';
 // Crossed spears over a door while a captain stands: no way out but through him.
@@ -177,7 +192,7 @@ export class Game {
         if (v === 'back') back(); else this.settingsMenu(back, ['s-', 's+', 'm-', 'm+', 'sh', 'li'].indexOf(v));
       } });
   }
-  has(id) { return this.save.powers.includes(id); }
+  has(id) { return id === 'item' ? !!this.save.item : this.save.powers.includes(id); }
   flag(k) { return !!this.save.flags[k]; }
   maxHp() { let n = 5; for (const k in this.save.flags) if (k.startsWith('boss')) n++; return n; }
   after(t, fn) { this.timers.push({ t, fn }); }
@@ -255,7 +270,7 @@ export class Game {
   }
   persist() { writeSave(this.storage, this.save); }
   resetSave() { clearSave(this.storage); this.save = freshSave(); this.loadRoom(0, null); }
-  chargeScale() { return this.save.powers.includes('valor') ? 0.5 : 1; }
+  chargeScale() { return (this.save.powers.includes('valor') ? 0.5 : 1) * (this.swift > 0 ? 0.25 : 1); }
 
   // ------------------------------------------------------------ events
   onSoldierFell(s, dir) {
@@ -313,6 +328,7 @@ export class Game {
     if (st === 'sealed') { this.banner2(this.demo ? 'BEYOND THIS DEMO' : 'THIS GATE IS NOT YET OPEN'); this.sfx.play('locked'); return; }
     if (st === 'locked') { this.banner2('SEALED. ' + POWERS.find((q) => q.id === l.needs).name.toUpperCase() + ' OPENS IT'); this.sfx.play('locked'); return; }
     if (l.act === 'saul') { this.saul(); return; }
+    if (l.act === 'stores') { this.stores(); return; }
     this.go(l);
   }
   go(l) {
@@ -338,10 +354,32 @@ export class Game {
       { text: ['"Come up now and claim Michal, the king\'s daughter. Or go out again, if you will: the Philistines still hold the valley, and the king will hear you whenever you choose."'] },
     ], [{ label: 'Continue', value: 'ok' }], () => { this.save.flags.scene100 = 1; this.persist(); this.banner2("SAUL'S TENT WILL HEAR DAVID WHEN HE CHOOSES", 5); }, { tally: this.save.tally });
   }
+  // How David stands in the camp, by captains fallen: 0 none, 1 (1-2), 2 (3-5), 3 (6-9), 4 all ten.
+  favor() { let n = 0; for (let i = 1; i <= 10; i++) if (this.flag('boss' + i)) n++; return n === 0 ? 0 : n < 3 ? 1 : n < 6 ? 2 : n < 10 ? 3 : 4; }
+  // What the man David is standing beside has to say. Invented talk, not scripture.
+  campTalk(q) {
+    if (this.region.id !== 0 || this.ui.cur || Math.abs(this.player.cx - (q.cx * T + 8)) > 26) return null;
+    return CAMP_TALK[this.favor()][q.cx % 2];
+  }
+  // The stores: David carries one thing at a time and may change it whenever he is in camp.
+  stores() {
+    const have = this.save.item ? ITEMS[this.save.item].name : 'nothing';
+    this.ui.scene('stores', [{ title: 'The Stores', text: [`The steward lets David carry one thing out of the camp. He carries ${have}.`, ...Object.values(ITEMS).map((it) => `${it.name}: ${it.what}`), this.touch ? 'Tap USE to use it.' : 'Press Q to use it.'] }],
+      [...Object.keys(ITEMS).map((id) => ({ label: ITEMS[id].name, value: id })), { label: 'Leave', value: 'leave' }], (v) => { if (ITEMS[v]) { this.save.item = v; this.persist(); this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[v].name.toUpperCase()); } });
+  }
+  useItem() {
+    const id = this.save.item, p = this.player; if (!id || this.ui.cur) return;
+    if (id === 'fig') { if (p.hp >= p.maxHp) { this.banner2('NOT HURT'); return; } p.hp = Math.min(p.maxHp, p.hp + 3); }
+    else if (id === 'oil') this.swift = 12;
+    else if (id === 'horn') { for (const s of this.soldiers) if (s.state !== 'dying' && Math.abs(s.cx - p.cx) < 260) { s.state = 'stagger'; s.t = 3; s.vx = 0; } this.shake = Math.max(this.shake, 3); }
+    this.save.item = null; this.persist(); this.sfx.play(id === 'horn' ? 'roar' : 'pop');
+    this.puff(p.cx, p.cy, 10, '#ffd680', 110, { glow: true, life: 0.4 });
+    this.banner2(ITEMS[id].used);
+  }
   saul() {
     const n = this.save.tally;
     if (!this.flag('scene100')) {
-      this.ui.scene('saul', [{ title: "Saul's Tent", text: [`The king asks no dowry but a hundred trophies of the Philistines. David has brought ${n}.`] }], [{ label: 'Leave', value: 'leave' }]);
+      this.ui.scene('saul', [{ title: "Saul's Tent", text: [`The king asks no dowry but a hundred trophies of the Philistines. David has brought ${n}.`, SAUL_MOOD[this.favor()]].filter(Boolean) }], [{ label: 'Leave', value: 'leave' }]);
       return;
     }
     const full = n >= TALLY_GOAL && this.flag('boss10');
@@ -438,6 +476,8 @@ export class Game {
     this.timers = this.timers.filter((tm) => tm.t > 0);
     for (const tm of due) tm.fn();
 
+    if (this.swift > 0) this.swift -= dt;
+    if (this.input.pressed.item && !this.player.dead) this.useItem();
     this.player.update(this, dt);
     if (this.checkLinks()) return;
     if (this.boss) { this.boss.update(this, dt); if (this.boss && this.boss.gone) this.boss = null; }
@@ -536,7 +576,7 @@ export class Game {
     for (const l of this.room.links) if (l.kind === 'door') { const st = this.doorState(l); if (st !== 'hidden' && on(l.cx * T, l.cy * T, 60)) drawDoor(w, l, l.cx * T + 8 - cx, (l.cy + 1) * T - cy, st, t); if (st !== 'hidden' && this.bossActive()) drawBars(w, l.cx * T + 8 - cx, (l.cy + 1) * T - cy); }
     for (const q of this.room.props) {
       if (!on(q.cx * T, q.cy * T, 60)) continue;
-      if (q.type === 'guard') drawIsraelite(w, q.cx * T + 8 - cx, (q.cy + 1) * T - cy, q.face || 1, t, q.cx);
+      if (q.type === 'guard') { drawIsraelite(w, q.cx * T + 8 - cx, (q.cy + 1) * T - cy, q.face || 1, t, q.cx); const say = this.campTalk(q); if (say) drawText(w, say, Math.round(clamp(q.cx * T + 8 - cx - textWidth(say) / 2, 4, W - 4 - textWidth(say))), (q.cy + 1) * T - cy - 44, '#f0e2bd', 1); }
       else drawProp(w, q, q.cx * T + 8 - cx, (q.cy + 1) * T - cy, t);
     }
     for (const o of this.torches) if (on(o.x, o.y)) drawTorchPost(w, o.x - cx, o.y - cy);
@@ -681,6 +721,10 @@ export class Game {
       ctx.fillStyle = '#0e0a12'; ctx.fillRect(bx - 1, by - 1, bw + 2, 6); ctx.fillStyle = '#3a1820'; ctx.fillRect(bx, by, bw, 4);
       ctx.fillStyle = b.flash > 0 ? '#ffffff' : '#d8362e'; ctx.fillRect(bx, by, Math.round(bw * f), 4); ctx.fillStyle = '#ff9a7a'; ctx.fillRect(bx, by, Math.round(bw * f), 1);
       ctx.fillStyle = '#ffd680'; ctx.fillRect(bx + bw / 2, by - 1, 1, 6);
+    }
+    if (this.save.item || this.swift > 0) {
+      const s = this.swift > 0 ? 'SWIFT SLING ' + Math.ceil(this.swift) : (this.touch ? '' : 'Q: ') + ITEMS[this.save.item].name.toUpperCase();
+      drawText(ctx, s, 8, 20, this.swift > 0 ? '#ffd680' : '#d9cba8', 1);
     }
     const tip = this.tip();
     if (tip) {

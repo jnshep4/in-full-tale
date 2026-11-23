@@ -75,6 +75,16 @@ Meter at this point: 12,965,939 units of the 17,010,000 stop line.
 - **No leaving a captain's ground.** Doors were already refused while a captain stands (`useDoor`). Now crossed spears are drawn over every door in the room (`drawBars`), and `checkLinks` refuses edge exits too (no captain's room has one today). Quitting to the title from the pause sheet is still allowed.
 - Tests: m5 33, m6 20, m1 39, m2 42, `npm test` all pass. m3 and m4 were not rerun (budget); nothing they cover was changed except the captain's music and the edge-exit guard.
 
+## Playtester feedback, first slice: stores, items, camp talk (2026-11-23)
+
+Playtesters asked for (1) consumable temporary items, (2) more varied captains, (3) more varied soldiers, (4) more to do in Saul's camp, used to foreshadow David's rise. The budget left room for (1) and (4) only. **(2) and (3) are not started.**
+
+- **The stores.** A new door in camp at column 31 (`act: 'stores'`, `stores()` in `src/game.js`). David carries one thing at a time (`save.item`) and can swap it free whenever he is in camp. Use key: Q or O, pad button 6, a USE touch button that appears while he carries something. The HUD shows it under the hearts.
+- **Items** (`ITEMS`): a cake of figs (restores 3 hearts; refused at full health), sling oil (12 s of 4x charge speed, `this.swift`, via `chargeScale()`), a ram's horn (staggers soldiers within 260 px for 3 s; captains are not affected).
+- **Camp talk.** Standing beside any man in camp shows a line over his head (`campTalk`, `CAMP_TALK`), chosen by `favor()`: tiers at 0, 1-2, 3-5, 6-9 and 10 captains fallen. The lines move from doubt to love for David and the king's unease. Saul's tent text gains a sentence at the higher tiers (`SAUL_MOOD`). All of it is invented dialogue, not scripture; it leans on 1 Samuel 18 (the camp's love for David, Saul's fear of him) by paraphrase from memory, so James should check it against the text.
+- Not done, ideas for the next run: items dropped by unmarked soldiers; a cost or limit on the stores; Jonathan as a figure in camp; the pause sheet does not list the Q key; the door uses the plain 'path' look and wants its own tent art. For (2) and (3): give each captain one attack no other has and a second phase at half health; add soldier kinds (slinger, shield-bearer pair, chariot runner) and mix them by region.
+- Tests: `npm test`, m1 39, m5 38, m6 20 pass. m2, m3, m4 not rerun (budget).
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
@@ -126,6 +136,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | phone demo: touch controls, fit, demo mode (read just before committing) | 12,965,939 |
 | 2 | opening verse cards and first-gateway arrow | 14,218,873 |
 | 2 | tips, dowry card, captain's music, barred doors (read just before committing) | 15,493,763 |
+| 2 | stores, items, camp talk (read just before committing) | 15,884,455 |
 
 ## Calibration
 

@@ -7,6 +7,7 @@ const BUTTONS = [
   { act: 'dash', label: 'DASH', power: 'dash', pos: 'right: 3vmin; bottom: 28vmin;' },
   { act: 'melee', label: 'SWORD', power: 'sword', pos: 'right: 20vmin; bottom: 28vmin;' },
   { act: 'cord', label: 'CORD', power: 'grapple', pos: 'right: 37vmin; bottom: 28vmin;' },
+  { act: 'item', label: 'USE', power: 'item', pos: 'right: 37vmin; bottom: 5vmin;' },
   { act: 'pause', label: 'II', cls: 'small', pos: 'right: 3vmin; top: 12vmin;' },
 ];
 
