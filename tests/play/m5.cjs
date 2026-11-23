@@ -56,6 +56,14 @@ const { launch, checker } = require('./helpers.cjs');
     t.ok(use.swift[0] === 1 && use.swift[1] === 0.25, 'sling oil quickens the sling', use.swift);
     t.ok(use.horn >= 1 && use.has === false, "a ram's horn staggers the soldiers near", use.horn);
     t.ok(use.talk0 && use.talk1 && use.talk0 !== use.talk1 && use.far === null, 'the men of the camp speak to David, and speak differently once a captain has fallen', [use.talk0, use.talk1]);
+    const lim = await ev(() => { const g = __ift.game, p = g.player, out = {}; out.credit0 = g.storeCredit(); g.stores(); out.shut = [...document.querySelectorAll('#card button')].map((b) => b.textContent); g.ui.close('leave');
+      g.save.tally = 3; out.credit3 = g.storeCredit(); g.save.tally = 0;
+      g.save.item = null; g.pickups.push({ x: p.x, y: p.y + 8, w: 6, h: 7, vx: 0, vy: 0, rest: true, item: 'horn' }); __ift.step(2, []); out.got = g.save.item; out.left = g.pickups.length;
+      g.pickups.push({ x: p.x, y: p.y + 8, w: 6, h: 7, vx: 0, vy: 0, rest: true, item: 'oil' }); __ift.step(2, []); out.kept = g.save.item; out.lying = g.pickups.length; g.render(); return out; });
+    await h.shot('m5-stores-tent');
+    t.ok(lim.credit0 === 0 && lim.shut.join() === 'Leave' && lim.credit3 === 1, 'the steward gives one thing, then one more for every three trophies', lim);
+    t.ok(lim.got === 'horn' && lim.left === 0 && lim.kept === 'horn' && lim.lying === 1, 'a dropped horn is picked up when his hands are empty; a second thing is left lying', lim);
+    await ev(() => { const g = __ift.game; g.save.item = null; g.pickups = []; });
     await ev(() => { const g = __ift.game; g.player.x = 14 * 16 + 3; g.player.hp = g.player.maxHp; g.snapCamera(); });
   }
 

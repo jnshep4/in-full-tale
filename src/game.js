@@ -132,7 +132,7 @@ export class Game {
   }
   pauseMenu() {
     const rows = this.tracker().map((r) => `<tr><td>${r.id}. ${r.name}</td><td>${r.got} / ${r.of}</td><td>${r.captain ? 'captain fallen' : ''}</td></tr>`).join('');
-    const powers = '<div class="hows">' + POWERS.filter((q) => this.has(q.id)).map((q) => `<p class="how"><b>${q.name}.</b> ${q.how}</p>`).join('') + '</div>';
+    const powers = '<div class="hows">' + POWERS.filter((q) => this.has(q.id)).map((q) => `<p class="how"><b>${q.name}.</b> ${q.how}</p>`).join('') + `<p class="how"><b>The stores.</b> David carries ${this.save.item ? ITEMS[this.save.item].name : 'nothing'}. ${this.touch ? 'Tap USE' : 'Press Q (or O)'} to use what he carries. The steward in Saul's camp parts with one thing for every three trophies brought in.</p>` + '</div>';
     this.ui.show({ kind: 'pause', quick: true, sound: 'select', esc: 'resume', buttons: [{ label: 'Resume', value: 'resume' }, { label: 'Map', value: 'map' }, { label: 'Settings', value: 'set' }, { label: 'Title', value: 'title' }],
       html: `<h2>The Tally: ${this.save.tally} of ${TALLY_GOAL}</h2><table class="sheet">${rows}</table>${powers}`,
       onClose: (v) => { if (v === 'set') this.settingsMenu(() => this.pauseMenu()); else if (v === 'title') this.title(); else if (v === 'map') this.mapCard(this.region.id > 0 ? this.region.id : 1); } });
@@ -283,8 +283,10 @@ export class Game {
         this.parts.push({ x: s.cx, y: s.y + 8, vx: (this.rand() - 0.5) * 260, vy: -120 - this.rand() * 200, g: 620, life: 0.9 + this.rand() * 0.5, max: 1.4, col: i % 2 ? '#fff3c8' : '#ffd680', size: 1, glow: true, bounce: true });
       }
       this.persist();
-    } else if (this.rand() < 0.35) {
-      this.pickups.push({ x: s.cx - 3, y: s.y + 6, w: 6, h: 7, vx: 0, vy: -150, rest: false });
+    } else {
+      // Unmarked soldiers: a fig about one time in three, and now and then sling oil or a horn.
+      const r = this.rand();
+      if (r < 0.45) this.pickups.push({ x: s.cx - 3, y: s.y + 6, w: 6, h: 7, vx: 0, vy: -150, rest: false, item: r < 0.35 ? null : r < 0.4 ? 'oil' : 'horn' });
     }
   }
 
@@ -362,10 +364,16 @@ export class Game {
     return CAMP_TALK[this.favor()][q.cx % 2];
   }
   // The stores: David carries one thing at a time and may change it whenever he is in camp.
+  // The steward gives one thing at the start and one more for every three trophies brought in.
+  storeCredit() { return 1 + Math.floor(this.save.tally / 3) - (this.save.taken || 0); }
   stores() {
-    const have = this.save.item ? ITEMS[this.save.item].name : 'nothing';
-    this.ui.scene('stores', [{ title: 'The Stores', text: [`The steward lets David carry one thing out of the camp. He carries ${have}.`, ...Object.values(ITEMS).map((it) => `${it.name}: ${it.what}`), this.touch ? 'Tap USE to use it.' : 'Press Q to use it.'] }],
-      [...Object.keys(ITEMS).map((id) => ({ label: ITEMS[id].name, value: id })), { label: 'Leave', value: 'leave' }], (v) => { if (ITEMS[v]) { this.save.item = v; this.persist(); this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[v].name.toUpperCase()); } });
+    const have = this.save.item ? ITEMS[this.save.item].name : 'nothing', credit = this.storeCredit(), more = 3 - (this.save.tally % 3);
+    if (credit <= 0) {
+      this.ui.scene('stores', [{ title: 'The Stores', text: [`David carries ${have}.`, `The steward has given what he will for now. Bring in ${more === 1 ? 'one more trophy' : more + ' more trophies'} and he will open the stores again.`, 'Soldiers who are not marked sometimes carry figs, oil or a horn.'] }], [{ label: 'Leave', value: 'leave' }]);
+      return;
+    }
+    this.ui.scene('stores', [{ title: 'The Stores', text: [`The steward lets David carry one thing out of the camp. He carries ${have}. The steward will part with ${credit === 1 ? 'one thing' : credit + ' things'} now, and one more for every three trophies brought in.`, ...Object.values(ITEMS).map((it) => `${it.name}: ${it.what}`), this.touch ? 'Tap USE to use it.' : 'Press Q to use it.'] }],
+      [...Object.keys(ITEMS).map((id) => ({ label: ITEMS[id].name, value: id })), { label: 'Leave', value: 'leave' }], (v) => { if (ITEMS[v]) { this.save.item = v; this.save.taken = (this.save.taken || 0) + 1; this.persist(); this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[v].name.toUpperCase()); } });
   }
   useItem() {
     const id = this.save.item, p = this.player; if (!id || this.ui.cur) return;
@@ -494,6 +502,8 @@ export class Game {
     const p = this.player;
     for (const k of this.pickups) {
       if (!k.rest) { k.vy = Math.min(k.vy + 700 * dt, 400); moveBody(this.room, k, dt, this.res); if (this.res.hy === 1) { k.rest = true; k.vy = 0; } }
+      const on = !p.dead && k.x < p.x + p.w && k.x + k.w > p.x && k.y < p.y + p.h && k.y + k.h > p.y;
+      if (k.item) { if (on && !this.save.item) { k.gone = true; this.save.item = k.item; this.persist(); this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[k.item].name.toUpperCase()); } continue; }
       if (!p.dead && p.hp < p.maxHp && k.x < p.x + p.w && k.x + k.w > p.x && k.y < p.y + p.h && k.y + k.h > p.y) { k.gone = true; p.hp++; this.sfx.play('heal'); this.puff(k.x + 3, k.y, 6, '#b7f0a0', 60, { glow: true }); }
     }
     for (const q of this.parts) {
@@ -580,7 +590,12 @@ export class Game {
       else drawProp(w, q, q.cx * T + 8 - cx, (q.cy + 1) * T - cy, t);
     }
     for (const o of this.torches) if (on(o.x, o.y)) drawTorchPost(w, o.x - cx, o.y - cy);
-    for (const k of this.pickups) drawFig(w, Math.round(k.x + 3 - cx), Math.round(k.y + 7 - cy));
+    for (const k of this.pickups) {
+      const x = Math.round(k.x + 3 - cx), y = Math.round(k.y + 7 - cy);
+      if (!k.item) drawFig(w, x, y);
+      else if (k.item === 'oil') { w.fillStyle = '#0e0a12'; w.fillRect(x - 3, y - 8, 6, 9); w.fillStyle = '#86522a'; w.fillRect(x - 2, y - 5, 4, 5); w.fillStyle = '#c98b3f'; w.fillRect(x - 1, y - 7, 2, 2); w.fillStyle = '#ffd680'; w.fillRect(x - 2, y - 4, 1, 3); }
+      else { w.fillStyle = '#0e0a12'; w.fillRect(x - 4, y - 6, 9, 7); w.fillStyle = '#e9d9b0'; w.fillRect(x - 3, y - 2, 5, 2); w.fillRect(x + 1, y - 4, 3, 2); w.fillRect(x + 3, y - 5, 1, 1); w.fillStyle = '#86522a'; w.fillRect(x - 3, y - 2, 1, 2); }
+    }
     for (const s of this.soldiers) if (on(s.x, s.y)) s.draw(w, cx, cy);
     if (this.boss) this.boss.draw(w, cx, cy);
     p.draw(w, cx, cy, this);

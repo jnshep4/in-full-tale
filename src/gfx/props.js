@@ -74,6 +74,14 @@ export function drawDoor(g, l, x, y, state, t) {
     px(g, '#1a1016', x - 6, y - 24, 12, 24); g.globalAlpha = 0.35 + 0.08 * Math.sin(t * 5); px(g, '#ffb45a', x - 6, y - 24, 12, 24); g.globalAlpha = 1;
     px(g, '#7a1f2a', x - 7, y - 25, 2, 25); px(g, '#7a1f2a', x + 5, y - 25, 2, 25);
     px(g, '#5a3a26', x - 1, y - 48, 2, 12); px(g, '#d8362e', x + 1, y - 48, 7, 4); px(g, '#ffd680', x + 1, y - 48, 7, 1);
+  } else if (l.look === 'stores') {
+    // The steward's tent: plain cloth, an open flap, sacks and oil jars stacked outside.
+    for (let i = 0; i < 24; i++) { const half = 5 + i; px(g, i % 6 === 0 ? '#6a5a44' : '#8a7a5e', x - half, y - 30 + i, half * 2, 1); }
+    px(g, '#8a7a5e', x - 29, y - 6, 58, 6); px(g, '#5a4a36', x - 29, y - 7, 58, 1);
+    px(g, '#1a1016', x - 6, y - 21, 12, 21); g.globalAlpha = 0.25 + 0.06 * Math.sin(t * 4); px(g, '#ffb45a', x - 6, y - 21, 12, 21); g.globalAlpha = 1;
+    px(g, '#5a4a36', x - 7, y - 22, 2, 22); px(g, '#5a4a36', x + 5, y - 22, 2, 22); px(g, '#5a3a26', x - 1, y - 36, 2, 8);
+    px(g, '#a8946a', x - 26, y - 7, 9, 7); px(g, '#c8b488', x - 25, y - 7, 7, 1); px(g, '#a8946a', x - 21, y - 12, 8, 6); px(g, '#c8b488', x - 20, y - 12, 6, 1); px(g, '#5a4a36', x - 18, y - 13, 2, 1);
+    px(g, '#86522a', x + 15, y - 9, 6, 9); px(g, '#c98b3f', x + 16, y - 11, 4, 2); px(g, '#ffd680', x + 16, y - 8, 1, 5); px(g, '#86522a', x + 23, y - 7, 5, 7); px(g, '#c98b3f', x + 24, y - 9, 3, 2);
   } else if (l.look === 'arena') {
     px(g, '#120d18', x - 13, y - 37, 26, 37); px(g, '#86522a', x - 13, y - 36, 5, 36); px(g, '#86522a', x + 8, y - 36, 5, 36); px(g, '#c98b3f', x - 13, y - 36, 2, 36); px(g, '#c98b3f', x + 8, y - 36, 2, 36);
     px(g, '#c98b3f', x - 15, y - 40, 30, 5); px(g, '#ffd680', x - 15, y - 40, 30, 1); px(g, '#1a1016', x - 8, y - 35, 16, 35);
