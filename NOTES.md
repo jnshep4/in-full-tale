@@ -77,13 +77,23 @@ Meter at this point: 12,965,939 units of the 17,010,000 stop line.
 
 ## Playtester feedback, first slice: stores, items, camp talk (2026-11-23)
 
-Playtesters asked for (1) consumable temporary items, (2) more varied captains, (3) more varied soldiers, (4) more to do in Saul's camp, used to foreshadow David's rise. The budget left room for (1) and (4) only. **(2) and (3) are not started.**
+Playtesters asked for (1) consumable temporary items, (2) more varied captains, (3) more varied soldiers, (4) more to do in Saul's camp, used to foreshadow David's rise. The budget left room for (1) and (4) only. (2) and (3) were done later the same day; see the next section.
 
 - **The stores.** A new door in camp at column 31 (`act: 'stores'`, `stores()` in `src/game.js`). David carries one thing at a time (`save.item`) and can swap it free whenever he is in camp. Use key: Q or O, pad button 6, a USE touch button that appears while he carries something. The HUD shows it under the hearts.
 - **Items** (`ITEMS`): a cake of figs (restores 3 hearts; refused at full health), sling oil (12 s of 4x charge speed, `this.swift`, via `chargeScale()`), a ram's horn (staggers soldiers within 260 px for 3 s; captains are not affected).
 - **Camp talk.** Standing beside any man in camp shows a line over his head (`campTalk`, `CAMP_TALK`), chosen by `favor()`: tiers at 0, 1-2, 3-5, 6-9 and 10 captains fallen. The lines move from doubt to love for David and the king's unease. Saul's tent text gains a sentence at the higher tiers (`SAUL_MOOD`). All of it is invented dialogue, not scripture; it leans on 1 Samuel 18 (the camp's love for David, Saul's fear of him) by paraphrase from memory, so James should check it against the text.
 - Not done, ideas for the next run: items dropped by unmarked soldiers; a cost or limit on the stores; Jonathan as a figure in camp; the pause sheet does not list the Q key; the door uses the plain 'path' look and wants its own tent art. For (2) and (3): give each captain one attack no other has and a second phase at half health; add soldier kinds (slinger, shield-bearer pair, chariot runner) and mix them by region.
 - Tests: `npm test`, m1 39, m5 38, m6 20 pass. m2, m3, m4 not rerun (budget).
+
+## Playtester feedback, second slice: varied soldiers and captains (2026-11-23)
+
+James said the budget had reset (message of 2026-11-23). No new figure was given; this slice assumed the same 18,900,000 again, counted from a meter reading of 15,927,444.
+
+- **Three new soldier kinds** (`src/ent/soldier.js`, art in `poseSoldier`): runner (no shield, 2-3 hp, chases at 128, strikes and springs back), pike (slow, reach 60, strikes from beyond a spear's reach), slinger (lobs a stone to where David stands). Level data is unchanged: `parseRoom` in `src/world/room.js` turns some spear and archer spawns into the new kinds by a hash of position. Runners from region 3 (more from 7), pikemen from 4, slingers from 5. Regions 1 and 2 are untouched. Counts by region are printed by m7.
+- **One attack of his own for each captain** (`src/ent/boss.js`, listed in `src/data/bosses.js`): Shalmek `advance` (walks in behind his shield, immune from the front, then thrusts), Ittur `axe` (thrown, comes back), Pashdu `fan` (three javelins landing one after another), Maroz `rockfall`, Goliath `rockfall` below half health, Akhtal `whirl` (spinning advance, guarded), Zeruk `pots` (fire pots that burst into ground flames), Banith `tide` (a wave from each wall), Yishvar `bolts` (two flat bolts, one low and one high, order random), Orphaz `step` (reappears behind David and cuts).
+- **Rage.** Every captain roars and shows HE RAGES when he drops to half health (he was already 25% faster there).
+- **Tests.** New `tests/play/m7.cjs` (16 checks): forces each captain's own attack against a David who stands still, checks the rage, the troop mix by region, and each new soldier kind. Full suite after the change: m1 39, m2 42, m3 53, m4 53, m5 38, m6 20, m7 16, `npm test` all pass. The bot still beats all ten captains.
+- Not checked: difficulty for a human. The new attacks were tuned by reasoning and by the bot, not by play.
 
 ## Final summary (2026-11-18)
 
@@ -137,6 +147,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | opening verse cards and first-gateway arrow | 14,218,873 |
 | 2 | tips, dowry card, captain's music, barred doors (read just before committing) | 15,493,763 |
 | 2 | stores, items, camp talk (read just before committing) | 15,884,455 |
+| 2 | budget reset by James at 15,927,444; soldier kinds, captain attacks, m7 (read just before committing) | 16,490,116 |
 
 ## Calibration
 
