@@ -9,11 +9,12 @@ export class Shot {
   constructor(kind, x, y, vx, vy, o = {}) {
     this.kind = kind; this.x = x; this.y = y; this.vx = vx; this.vy = vy;
     this.grav = o.grav ?? (kind === 'wave' ? 0 : 300); this.life = o.life ?? 3; this.dmg = o.dmg ?? 1;
-    this.dead = false; this.stuck = 0; this.turned = false; this.owner = o.owner || null; this.t = 0;
+    this.dead = false; this.stuck = 0; this.turned = false; this.owner = o.owner || null; this.t = 0; this.back = o.back || 0;
   }
   box() { return this.kind === 'beam' ? { x: this.x - 12, y: this.y - 3, w: 24, h: 6 } : this.kind === 'wave' ? { x: this.x - 6, y: this.y - 12, w: 12, h: 12 } : { x: this.x - 3, y: this.y - 3, w: 6, h: 6 }; }
   update(g, dt) {
     this.t += dt; this.life -= dt;
+    if (this.back) this.vx += this.back * dt;                       // a thrown axe comes back
     if (this.life <= 0) { this.dead = true; return; }
     if (this.stuck > 0) { this.stuck -= dt; if (this.stuck <= 0) this.dead = true; return; }
     this.vy += this.grav * dt; this.x += this.vx * dt; this.y += this.vy * dt;
@@ -22,6 +23,11 @@ export class Shot {
       if (room.solid(Math.floor((this.x + Math.sign(this.vx) * 6) / T), Math.floor((this.y - 4) / T)) || !room.solid(Math.floor(this.x / T), Math.floor((this.y + 4) / T))) { this.dead = true; return; }
       if (g.frame % 3 === 0) g.parts.push({ x: this.x, y: this.y - 2, vx: (g.rand() - 0.5) * 40, vy: -60 - g.rand() * 60, g: 300, life: 0.3, max: 0.3, col: '#ffd680', size: 1, glow: true });
     } else if (room.solid(Math.floor(this.x / T), Math.floor(this.y / T))) {
+      if (this.kind === 'pot') {                         // a fire pot bursts into two running flames
+        const fy = Math.floor(this.y / T) * T; this.dead = true; g.sfx.play('slam'); g.puff(this.x, fy, 10, '#ff8650', 120, { glow: true, life: 0.3 });
+        for (const d of [-1, 1]) g.shots.push(new Shot('wave', this.x + d * 8, fy, d * 120, 0, { life: 0.8, owner: this.owner }));
+        return;
+      }
       this.stuck = 0.6; g.sfx.play('stoneHit'); return;
     }
     if (this.turned) {                                   // turned back by the buckler: now it is David's
@@ -42,6 +48,8 @@ export class Shot {
       ctx.fillStyle = '#fff3c8'; ctx.fillRect(x, y - hgt - 2, 1, 3);
       return;
     }
+    if (this.kind === 'axe') { const c = Math.cos(this.t * 22), s = Math.sin(this.t * 22); ctx.fillStyle = '#6a4a34'; for (let i = -4; i <= 4; i++) ctx.fillRect(Math.round(x + c * i), Math.round(y + s * i), 1, 1); ctx.fillStyle = '#d9dbe6'; ctx.fillRect(Math.round(x + c * 4) - 1, Math.round(y + s * 4) - 1, 3, 3); return; }
+    if (this.kind === 'pot') { ctx.fillStyle = '#86522a'; ctx.fillRect(x - 2, y - 2, 5, 5); ctx.fillStyle = '#ff8650'; ctx.fillRect(x - 1, y - 4, 3, 2); ctx.fillStyle = '#ffd680'; ctx.fillRect(x, y - 5, 1, 2); return; }
     const a = Math.atan2(this.vy, this.vx), len = this.kind === 'beam' ? 26 : this.kind === 'javelin' ? 9 : this.kind === 'rock' ? 0 : 6;
     if (this.kind === 'rock') { ctx.fillStyle = '#0e0a12'; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.fillStyle = '#8a7f96'; ctx.fillRect(x - 2, y - 2, 4, 4); ctx.fillStyle = '#b9afc4'; ctx.fillRect(x - 2, y - 2, 2, 1); return; }
     for (let i = -len; i <= len; i++) {
@@ -81,7 +89,7 @@ export class Boss {
     let pool = list.length ? list : this.cfg.attacks.filter(ok);
     // David overhead and out of reach: use what can reach him.
     const p = g.player;
-    if (this.y - (p.y + p.h) > 20) { const up = this.cfg.attacks.filter((a) => ok(a) && ['volley', 'rain', 'leap', 'summon', 'stomp'].includes(a.id) && a.id !== this.last); if (up.length) pool = up; }
+    if (this.y - (p.y + p.h) > 20) { const up = this.cfg.attacks.filter((a) => ok(a) && ['volley', 'rain', 'leap', 'summon', 'stomp', 'fan', 'rockfall', 'pots'].includes(a.id) && a.id !== this.last); if (up.length) pool = up; }
     let tot = 0; for (const a of pool) tot += a.w || 1;
     let r = g.rand() * tot;
     for (const a of pool) { r -= a.w || 1; if (r <= 0) return a; }
@@ -100,6 +108,7 @@ export class Boss {
       if (this.t > 1.8) { this.gone = true; g.onBossFell(this); }
       return;
     }
+    if (!this.raged && this.phase === 2) { this.raged = true; g.sfx.play('roar'); g.shake = Math.max(g.shake, 6); g.banner2('HE RAGES', 1.2); g.puff(this.cx, this.cy, 14, '#ff8650', 150, { glow: true, life: 0.35 }); }
     const dx = p.cx - this.cx, adx = Math.abs(dx);
     const A = this.attack;
     switch (this.state) {
@@ -169,6 +178,28 @@ export class Boss {
         for (const d of [-1, 1]) g.shots.push(new Shot('wave', this.cx + d * 14, this.y + this.h, d * 170, 0, { life: 1.1, owner: this })); break;
       case 'summon': this.t = 0.5; g.summon(this, A.n || 2, A.kind || 'spear'); g.sfx.play('roar'); break;
       case 'rain': this.t = 0.3; this.n = A.n || 5; break;
+      // ---- one attack of his own for each captain
+      case 'advance': this.t = 1.6; g.sfx.play('tink'); break;                       // Shalmek: walks in behind his shield, then thrusts
+      case 'axe': this.t = 0.3; g.sfx.play('throw');                                 // Ittur: the axe flies out and comes back
+        g.shots.push(new Shot('axe', this.cx + this.face * 10, this.y + 14, this.face * 270, 0, { grav: 0, life: 2, owner: this, back: -this.face * 300 })); break;
+      case 'fan': {                                                                  // Pashdu: three javelins, falling one after another
+        this.t = 0.3; g.sfx.play('throw'); const ox = this.cx + this.face * 8, oy = this.y + 6;
+        [0.5, 0.8, 1.15].forEach((fl, i) => { const tx = p.cx + (i - 1) * 36; g.shots.push(new Shot('javelin', ox, oy, (tx - ox) / fl, (p.cy - oy) / fl - 150 * fl, { owner: this })); }); break;
+      }
+      case 'rockfall': {                                                             // Maroz, Goliath: the blow brings stones down
+        this.t = 0.5; g.shake = 9; g.sfx.play('slam'); g.puff(this.cx + this.face * 10, this.y + this.h, 14, '#b9a685', 140); const n = A.n || 4;
+        for (let i = 0; i < n; i++) g.shots.push(new Shot('rock', clamp(p.cx + (i - Math.floor(n / 2)) * 40 + (g.rand() - 0.5) * 12, 24, g.room.w * T - 24), g.cam.y - 10 - i * 36, 0, 30, { grav: 240, life: 4, owner: this })); break;
+      }
+      case 'whirl': this.t = 1.3; g.sfx.play('swing'); break;                        // Akhtal: spins the axe and comes on
+      case 'pots': this.t = 0.2; this.n = A.n || 3; break;                           // Zeruk: fire pots that burst along the ground
+      case 'tide': this.t = 0.6; g.shake = 7; g.sfx.play('slam');                    // Banith: a wave runs in from each wall
+        for (const d of [-1, 1]) g.shots.push(new Shot('wave', d > 0 ? 26 : g.room.w * T - 26, this.y + this.h, d * 150, 0, { life: 7, owner: this })); break;
+      case 'bolts': this.t = 0.1; this.n = 2; this.flip = g.rand() < 0.5; break;     // Yishvar: two bolts, one low, one high
+      case 'step': {                                                                 // Orphaz: gone in the dust, and behind him
+        this.t = 0.45; const tx = clamp(p.cx - p.face * 44 - this.w / 2, 24, g.room.w * T - 24 - this.w);
+        if (g.room.solid(Math.floor((tx + this.w / 2) / T), Math.floor((this.y + this.h + 3) / T))) { g.puff(this.cx, this.cy, 14, '#3a3440', 120); this.x = tx; g.puff(this.cx, this.cy, 14, '#3a3440', 120); }
+        this.face = Math.sign(p.cx - this.cx) || this.face; g.sfx.play('swing'); break;
+      }
       default: this.t = 0.3;
     }
   }
@@ -195,6 +226,34 @@ export class Boss {
         if (overlap(this, p)) p.hurt(g, A.dmg || 1, this.face);
         break;
       case 'leap': if (!this.onGround && overlap(this, p)) p.hurt(g, 1, Math.sign(p.cx - this.cx) || 1); break;
+      case 'advance': {
+        this.vx = this.t > 0.3 ? this.face * 62 * this.speed() : approach(this.vx, 0, 500 * dt);
+        if (this.t <= 0.3 && !this.lunged) { this.lunged = true; this.vx = this.face * 260; g.sfx.play('thrust'); }
+        const tip = { x: this.face > 0 ? this.x + this.w : this.x - 30, y: this.y + 8, w: 30, h: 10 };
+        if (this.t <= 0.3 && !this.struck && overlap(tip, p)) this.struck = p.hurt(g, 1, this.face) || this.struck;
+        if (this.t <= 0) this.lunged = false;
+        break;
+      }
+      case 'whirl': {
+        if (Math.abs(dx) > 24) this.face = Math.sign(dx);
+        this.vx = this.face * 118 * this.speed();
+        if (g.frame % 3 === 0) g.puff(this.cx + Math.cos(this.t * 20) * 20, this.y + 14, 1, '#d9dbe6', 30, { glow: true, life: 0.15 });
+        if (overlap({ x: this.x - 20, y: this.y + 4, w: this.w + 40, h: this.h - 4 }, p)) p.hurt(g, 1, Math.sign(p.cx - this.cx) || 1);
+        break;
+      }
+      case 'step': {
+        const arc = { x: this.face > 0 ? this.x + this.w - 4 : this.x - 30, y: this.y - 6, w: 34, h: this.h + 6 };
+        if (!this.struck && this.t < 0.2 && overlap(arc, p)) this.struck = p.hurt(g, 1, this.face) || this.struck;
+        break;
+      }
+      case 'bolts':
+        this.vx = 0;
+        if (this.t <= 0 && this.n > 0) {
+          this.n--; this.t = this.n > 0 ? 0.5 : 0.15; const low = (this.n === 1) === this.flip;
+          g.shots.push(new Shot('beam', this.cx + this.face * 16, this.y + this.h - (low ? 7 : 36), this.face * 250, 0, { grav: 0, owner: this })); g.sfx.play('throw');
+        }
+        break;
+      case 'pots':
       case 'volley':
         this.vx = 0;
         if (this.t <= 0 && this.n > 0) {
@@ -202,8 +261,8 @@ export class Boss {
           if (A.shot === 'beam') {                       // Goliath's spear, like a weaver's beam: flat and fast
             g.shots.push(new Shot('beam', this.cx + this.face * 16, this.y + 26, this.face * 300, -20, { grav: 60, dmg: 2, owner: this })); g.sfx.play('throw'); this.t = 0.2; break;
           }
-          const ox = this.cx + this.face * 8, oy = this.y + 6, tx = p.cx + (g.rand() - 0.5) * 30, flight = clamp(Math.abs(tx - ox) / 230, 0.45, 1.1);
-          g.shots.push(new Shot(A.shot || 'javelin', ox, oy, (tx - ox) / flight, (p.cy - oy) / flight - 150 * flight, { owner: this }));
+          const pot = A.id === 'pots', ox = this.cx + this.face * 8, oy = this.y + 6, tx = p.cx + (g.rand() - 0.5) * (pot ? 130 : 30), flight = clamp(Math.abs(tx - ox) / 230, 0.45, 1.1);
+          g.shots.push(new Shot(pot ? 'pot' : A.shot || 'javelin', ox, oy, (tx - ox) / flight, (p.cy - oy) / flight - 150 * flight, { owner: this }));
           g.sfx.play('throw');
           if (this.n === 0) this.t = 0.15;
         }
@@ -251,7 +310,8 @@ export class Boss {
       return true;
     }
     const weak = tags.includes(this.cfg.weak);
-    const open = this.state === 'recover' || this.state === 'stagger' || (this.state === 'act' && this.attack.id !== 'charge');
+    const open = this.state === 'recover' || this.state === 'stagger' || (this.state === 'act' && !['charge', 'whirl', 'advance'].includes(this.attack.id));
+    if (this.state === 'act' && this.attack.id === 'advance' && dir === -this.face && !weak) { g.sfx.play('tink'); g.puff(this.cx + this.face * 9, this.y + 14, 5, '#ffd680', 90, { glow: true, life: 0.2 }); return false; }
     if (this.cfg.guard && !weak && !open && dir === -this.face && charge < (this.cfg.guard === 2 ? 1 : 0.5)) {
       g.sfx.play('tink'); g.puff(this.cx + this.face * 9, this.y + 14, 5, '#ffd680', 90, { glow: true, life: 0.2 });
       return false;

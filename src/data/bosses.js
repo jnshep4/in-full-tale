@@ -12,6 +12,7 @@ export const BOSSES = {
       { id: 'thrust', w: 3, max: 150, tele: 0.55, rest: 0.9 },
       { id: 'leap', w: 2, min: 60, tele: 0.45, rest: 1.0 },
       { id: 'volley', w: 2, min: 90, phase: 2, n: 3, tele: 0.5, rest: 0.8 },
+      { id: 'advance', w: 2, min: 50, max: 170, tele: 0.5, rest: 1.0 },
     ],
   },
 };
@@ -24,6 +25,7 @@ Object.assign(BOSSES, {
       { id: 'charge', w: 3, min: 70, tele: 0.6, v: 240 },
       { id: 'sweep', w: 3, max: 70, tele: 0.45, rest: 0.8 },
       { id: 'leap', w: 2, min: 60, phase: 2, tele: 0.4, rest: 0.9 },
+      { id: 'axe', w: 3, min: 60, tele: 0.5, rest: 0.9 },
     ],
   },
   3: {
@@ -34,6 +36,7 @@ Object.assign(BOSSES, {
       { id: 'leap', w: 2, tele: 0.35, rest: 0.8, vy: 440 },
       { id: 'thrust', w: 2, max: 140, tele: 0.45, rest: 0.8 },
       { id: 'rain', w: 2, phase: 2, n: 6, tele: 0.6, rest: 0.9 },
+      { id: 'fan', w: 3, min: 70, tele: 0.5, rest: 0.8 },
     ],
   },
   4: {
@@ -41,6 +44,7 @@ Object.assign(BOSSES, {
     look: { bronze: '#c8a04a', bronzeD: '#8a6a2a', bronzeH: '#ffe890', plume: ['#c7924a', '#ffe0a0'], cape: '#6d3f1e', kilt: '#c8b890', kiltD: '#94845e', band: '#3a602e', beard: '#6d3f1e', weapon: 'mace', shield: true },
     attacks: [
       { id: 'summon', w: 2, n: 1, kind: 'lion', tele: 0.7, rest: 0.6, limit: 2 },
+      { id: 'rockfall', w: 2, n: 4, tele: 0.7, rest: 0.9 },
       { id: 'charge', w: 3, min: 80, tele: 0.55, v: 260 },
       { id: 'sweep', w: 3, max: 70, tele: 0.4, rest: 0.7 },
       { id: 'leap', w: 2, min: 60, tele: 0.4, rest: 0.9 },
@@ -54,6 +58,7 @@ Object.assign(BOSSES, {
       { id: 'stomp', w: 3, tele: 0.65, rest: 1.0 },
       { id: 'volley', w: 2, min: 110, n: 1, tele: 0.8, rest: 0.9, shot: 'beam' },
       { id: 'charge', w: 2, min: 120, phase: 2, tele: 0.8, v: 170 },
+      { id: 'rockfall', w: 2, phase: 2, n: 5, tele: 0.8, rest: 1.0 },
     ],
   },
 });
@@ -67,6 +72,7 @@ Object.assign(BOSSES, {
       { id: 'charge', w: 2, min: 80, tele: 0.6, v: 250 },
       { id: 'leap', w: 2, min: 50, tele: 0.45, rest: 1.0 },
       { id: 'summon', w: 1, phase: 2, n: 1, kind: 'heavy', tele: 0.7, rest: 0.6, limit: 1 },
+      { id: 'whirl', w: 3, max: 140, tele: 0.5, rest: 1.1 },
     ],
   },
   7: {
@@ -77,6 +83,7 @@ Object.assign(BOSSES, {
       { id: 'rain', w: 2, n: 7, tele: 0.6, rest: 0.9 },
       { id: 'thrust', w: 2, max: 90, tele: 0.45, rest: 0.8 },
       { id: 'leap', w: 2, phase: 2, tele: 0.4, rest: 0.9 },
+      { id: 'pots', w: 3, min: 50, n: 3, tele: 0.5, rest: 0.9 },
     ],
   },
   8: {
@@ -87,6 +94,7 @@ Object.assign(BOSSES, {
       { id: 'charge', w: 2, min: 80, tele: 0.5, v: 280 },
       { id: 'volley', w: 2, min: 80, n: 3, tele: 0.45, rest: 0.7 },
       { id: 'leap', w: 2, tele: 0.4, rest: 0.9, vy: 460 },
+      { id: 'tide', w: 2, tele: 0.9, rest: 0.8 },
     ],
   },
   9: {
@@ -98,6 +106,7 @@ Object.assign(BOSSES, {
       { id: 'volley', w: 2, min: 90, n: 3, tele: 0.45, rest: 0.7 },
       { id: 'charge', w: 2, min: 90, tele: 0.5, v: 280 },
       { id: 'rain', w: 2, phase: 2, n: 6, tele: 0.6, rest: 0.8 },
+      { id: 'bolts', w: 3, min: 70, tele: 0.6, rest: 0.9 },
     ],
   },
   10: {
@@ -111,6 +120,7 @@ Object.assign(BOSSES, {
       { id: 'rain', w: 2, phase: 2, n: 7, tele: 0.55, rest: 0.8 },
       { id: 'summon', w: 1, phase: 2, n: 1, kind: 'heavy', tele: 0.7, rest: 0.6, limit: 1 },
       { id: 'charge', w: 2, min: 100, phase: 2, tele: 0.5, v: 290 },
+      { id: 'step', w: 3, min: 60, tele: 0.35, rest: 0.8 },
     ],
   },
 });

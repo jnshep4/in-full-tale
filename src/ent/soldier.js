@@ -1,7 +1,8 @@
 // Philistine soldiers, and the lions of Timnah. Marked soldiers (crimson crest, glowing ring
 // overhead) each carry one of the 200 trophies and never respawn. Unmarked ones respawn and can only
 // drop a fig. Kinds: spear (shield turns light stones), archer (looses arrows from range), heavy
-// (tower shield turns everything short of a full-charge stone), lion (pounces; never marked).
+// (tower shield turns everything short of a full-charge stone), lion (pounces; never marked),
+// runner (no shield, fast, strikes and springs back), pike (slow, long reach), slinger (lobs stones).
 import { T, approach, overlap, clamp } from '../core.js';
 import { moveBody, touches, SPIKE, SOLID, ONEWAY, WATER, isBarrier } from '../world/room.js';
 import { drawSoldier, drawSoldierLight, drawLion } from '../gfx/chars.js';
@@ -9,8 +10,11 @@ import { Shot } from './boss.js';
 
 const KIND = {
   spear: { w: 12, h: 24, hp: [3, 4], walk: 28, chase: 82, sight: 124, reach: 36, guard: 0.5, wind: 0.42 },
-  archer: { w: 12, h: 24, hp: [2, 3], walk: 18, chase: 0, sight: 232, reach: 232, guard: 0, wind: 0.75 },
+  archer: { w: 12, h: 24, hp: [2, 3], walk: 18, chase: 0, sight: 232, reach: 232, guard: 0, wind: 0.75, ranged: true },
   heavy: { w: 14, h: 26, hp: [7, 8], walk: 20, chase: 46, sight: 120, reach: 36, guard: 1, wind: 0.55 },
+  runner: { w: 12, h: 24, hp: [2, 3], walk: 40, chase: 128, sight: 150, reach: 30, guard: 0, wind: 0.3 },
+  pike: { w: 12, h: 24, hp: [4, 5], walk: 22, chase: 58, sight: 140, reach: 60, guard: 0.5, wind: 0.62 },
+  slinger: { w: 12, h: 24, hp: [2, 3], walk: 24, chase: 0, sight: 180, reach: 180, guard: 0, wind: 0.5, ranged: true },
   lion: { w: 22, h: 14, hp: [4, 4], walk: 36, chase: 118, sight: 150, reach: 74, guard: 0, wind: 0.32 },
 };
 
@@ -45,7 +49,7 @@ export class Soldier {
       return;
     }
     const dx = p.cx - this.cx, dy = (p.y + p.h) - (this.y + this.h), adx = Math.abs(dx);
-    let sees = !p.dead && adx < K.sight && Math.abs(dy) < (this.kind === 'archer' ? 72 : 40) && (Math.sign(dx) === this.face || adx < 44);
+    let sees = !p.dead && adx < K.sight && Math.abs(dy) < (K.ranged ? 72 : 40) && (Math.sign(dx) === this.face || adx < 44);
     // Walls, doors and hedges block both his sight and his weapon.
     if (sees || this.state !== 'patrol') { this.wall = false; for (let x = Math.min(p.cx, this.cx); x <= Math.max(p.cx, this.cx); x += 8) if (room.solid(Math.floor(x / T), Math.floor((this.y + 8) / T))) { this.wall = true; break; } }
     if (this.wall) { sees = false; if (this.state === 'chase' || this.state === 'alert' || this.state === 'windup') { this.state = 'patrol'; this.lost = 0; } }
@@ -60,24 +64,25 @@ export class Soldier {
         break;
       case 'chase':
         if (adx > 3) this.face = Math.sign(dx);
-        if (this.kind === 'archer') this.vx = adx < 60 && this.floorAhead(room, -this.face) ? -this.face * 40 : 0;       // keeps his distance
+        if (K.ranged) this.vx = adx < 60 && this.floorAhead(room, -this.face) ? -this.face * 40 : 0;       // keeps his distance
         else this.vx = adx > K.reach - 6 && this.floorAhead(room, this.face) ? this.face * K.chase : 0;
-        if (adx <= K.reach && Math.abs(dy) < (this.kind === 'archer' ? 72 : 28) && !p.dead && (this.kind !== 'archer' || adx > 30)) { this.state = 'windup'; this.t = K.wind; this.vx = 0; g.sfx.play('windup'); }
+        if (adx <= K.reach && Math.abs(dy) < (K.ranged ? 72 : 28) && !p.dead && (!K.ranged || adx > 30)) { this.state = 'windup'; this.t = K.wind; this.vx = 0; g.sfx.play('windup'); }
         this.lost = (adx > K.sight + 66 || Math.abs(dy) > 80 || p.dead) ? this.lost + dt : 0;
         if (this.lost > 1.6) { this.state = 'patrol'; this.lost = 0; }
         break;
       case 'windup':
         this.vx = 0; this.t -= dt;
-        if (this.kind === 'archer' && adx > 3) this.face = Math.sign(dx);
+        if (K.ranged && adx > 3) this.face = Math.sign(dx);
         if (this.t <= 0) {
           this.state = 'thrust'; this.struck = false;
-          if (this.kind === 'archer') {
+          if (K.ranged) {
             this.t = 0.15;
             const ox = this.cx + this.face * 7, oy = this.y + 8, fl = clamp(adx / 250, 0.25, 1);
-            g.shots.push(new Shot('arrow', ox, oy, (p.cx - ox) / fl, (p.cy - oy) / fl - 60 * fl, { grav: 120 }));
+            if (this.kind === 'slinger') { const ft = clamp(adx / 170, 0.55, 1.05); g.shots.push(new Shot('rock', ox, oy - 6, (p.cx - ox) / ft, (p.cy - oy + 6) / ft - 150 * ft, { grav: 300 })); }
+            else g.shots.push(new Shot('arrow', ox, oy, (p.cx - ox) / fl, (p.cy - oy) / fl - 60 * fl, { grav: 120 }));
             g.sfx.play('throw');
           } else if (this.kind === 'lion') { this.t = 0.6; this.vx = this.face * 235; this.vy = -215; this.onGround = false; g.sfx.play('roar'); }
-          else { this.t = 0.2; this.vx = this.face * (this.kind === 'heavy' ? 110 : 150); g.sfx.play(this.kind === 'heavy' ? 'swing' : 'thrust'); }
+          else { this.t = 0.2; this.vx = this.face * (this.kind === 'heavy' ? 110 : this.kind === 'pike' ? 70 : this.kind === 'runner' ? 190 : 150); g.sfx.play(this.kind === 'heavy' ? 'swing' : 'thrust'); }
         }
         break;
       case 'thrust': {
@@ -88,19 +93,19 @@ export class Soldier {
         }
         this.vx = approach(this.vx, 0, 700 * dt);
         if (!this.floorAhead(room, this.face)) this.vx = 0;
-        if (this.kind !== 'archer') {
-          const rch = this.kind === 'heavy' ? 24 : 20;
+        if (!K.ranged) {
+          const rch = this.kind === 'heavy' ? 24 : this.kind === 'pike' ? 46 : 20;
           const tip = { x: this.face > 0 ? this.x + this.w : this.x - rch, y: this.y + (this.kind === 'heavy' ? 0 : 5), w: rch, h: this.kind === 'heavy' ? 22 : 8 };
           if (!this.struck && !this.wall && overlap(tip, p)) {
             if (g.blocks(this.face)) { this.struck = true; this.state = 'stagger'; this.t = 0.5; this.vx = -this.face * 90; g.sfx.play('tink'); g.puff(p.cx + p.face * 6, p.cy, 6, '#ffd680', 90, { glow: true, life: 0.2 }); break; }
             this.struck = p.hurt(g, 1, this.face) || this.struck;
           }
         }
-        this.t -= dt; if (this.t <= 0) { this.state = 'recover'; this.t = this.kind === 'archer' ? 1.0 : this.kind === 'heavy' ? 0.8 : 0.55; }
+        this.t -= dt; if (this.t <= 0) { this.state = 'recover'; this.t = this.kind === 'archer' ? 1.0 : this.kind === 'slinger' ? 0.7 : this.kind === 'heavy' || this.kind === 'pike' ? 0.8 : 0.55; if (this.kind === 'runner' && this.floorAhead(room, -this.face)) { this.vx = -this.face * 240; this.t = 0.6; } }
         break;
       }
       case 'recover':
-        this.vx = approach(this.vx, 0, 600 * dt); this.t -= dt; if (this.t <= 0) this.state = 'chase';
+        this.vx = approach(this.vx, 0, (this.kind === 'runner' ? 380 : 600) * dt); this.t -= dt; if (this.t <= 0) this.state = 'chase';
         break;
       case 'stagger':
         this.vx = approach(this.vx, 0, 500 * dt);

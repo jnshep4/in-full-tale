@@ -37,6 +37,10 @@ export function parseRoom(def, regionId) {
       const d = SPAWN_CHARS[ch];
       if (!d) { problems.push(`unknown map char '${ch}' at ${x},${y}`); continue; }
       const sp = { type: d.type, kind: d.kind, cx: x, cy: y };
+      // Later regions mix in other troops, by place: runners from region 3, pikemen from 4, slingers from 5.
+      const hsh = (x * 7 + y * 13 + regionId * 5) % 5;
+      if (sp.kind === 'spear') { if (regionId >= 3 && (hsh === 0 || (regionId >= 7 && hsh === 2))) sp.kind = 'runner'; else if (regionId >= 4 && hsh === 1) sp.kind = 'pike'; }
+      else if (sp.kind === 'archer' && regionId >= 5 && hsh % 2 === 0) sp.kind = 'slinger';
       if (d.type === 'start') start = sp;
       if (d.type === 'marked') sp.id = `${regionId}.${def.id}.${markedN++}`;
       spawns.push(sp);

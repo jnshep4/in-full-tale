@@ -139,23 +139,34 @@ function poseSoldier(p) {
   const a = moving ? [Math.round(s * 3), Math.round(Math.max(0, c) * 2)] : st === 'thrust' ? [4, 0] : [2, 0];
   const b = moving ? [Math.round(-s * 3), Math.round(Math.max(0, -c) * 2)] : st === 'thrust' ? [-4, 0] : [-2, 0];
   const hip = -10 + by;
+  const kind = p.kind || 'spear', pikeman = kind === 'pike', bare = kind === 'runner' || kind === 'slinger';
   // Spear (behind the body in patrol, in front otherwise)
   const spear = () => {
     let x0, y0, x1, y1;
-    if (st === 'patrol') { x0 = -4; y0 = -3; x1 = -2; y1 = -35; }
+    if (st === 'patrol') { x0 = -4; y0 = -3; x1 = -2; y1 = pikeman ? -46 : -35; }
     else if (st === 'windup') { x0 = -15; y0 = -14 + by; x1 = 4; y1 = -17 + by; }
-    else if (st === 'thrust') { x0 = -1; y0 = -16; x1 = 22; y1 = -16; }
+    else if (st === 'thrust') { x0 = -1; y0 = -16; x1 = pikeman ? 44 : 22; y1 = -16; }
     else if (st === 'recover') { x0 = -4; y0 = -15; x1 = 15; y1 = -12; }
     else if (st === 'stagger') { x0 = -6; y0 = -5; x1 = -9; y1 = -34; }
-    else { x0 = -7; y0 = -12 + by; x1 = 13; y1 = -18 + by; }
+    else { x0 = -7; y0 = -12 + by; x1 = pikeman ? 26 : 13; y1 = (pikeman ? -22 : -18) + by; }
     Ln(x0, y0, x1, y1, S.shaft);
     const tx = x0 + (x1 - x0) * 0.84, tyy = y0 + (y1 - y0) * 0.84;
     Ln(tx, tyy, x1, y1, st === 'windup' && Math.sin(p.t * 40) > 0 ? '#ffffff' : S.bronzeH, 1);
     Ln(tx, tyy + 1, x1 - (x1 > x0 ? 1 : 0), y1 + 1, S.bronze, 1);
   };
-  const kind = p.kind || 'spear';
   const weapon = () => {
-    if (kind === 'spear') return spear();
+    if (kind === 'spear' || kind === 'pike') return spear();
+    if (kind === 'runner') {                                 // a short curved blade
+      const L = st === 'windup' ? [2, -18, -5, -28] : st === 'thrust' ? [4, -16, 15, -15] : st === 'recover' ? [3, -14, 11, -7] : [4, -13, 9, -20];
+      Ln(L[0], L[1], L[2], L[3], st === 'windup' && Math.sin(p.t * 40) > 0 ? '#ffffff' : '#d9dbe6', 1); R(L[2], L[3] - 1, 2, 1, '#d9dbe6');
+      return;
+    }
+    if (kind === 'slinger') {                                // a sling, whirled in the wind-up
+      if (st === 'windup') { const ax = 4 + Math.round(Math.cos(p.t * 34) * 6), ay = -27 + Math.round(Math.sin(p.t * 34) * 5); Ln(4, -20, ax, ay, '#e9d9b0'); R(ax - 1, ay - 1, 2, 2, '#b9afc4'); }
+      else { Ln(5, -17, 5, -10, '#e9d9b0'); R(4, -10, 2, 2, '#b9afc4'); }
+      R(-5, -15, 3, 4, '#6d4628');                           // pouch of stones
+      return;
+    }
     if (kind === 'heavy') {                                  // a broad iron sword
       const L = st === 'windup' ? [-3, -20, -9, -33] : st === 'thrust' ? [3, -17, 19, -12] : st === 'recover' ? [3, -14, 14, -4] : [-5, -10, -7, -24];
       Ln(L[0], L[1], L[2], L[3], st === 'windup' && Math.sin(p.t * 40) > 0 ? '#ffffff' : '#d9dbe6', 2); R(L[0] - 1, L[1], 3, 2, S.bronzeH);
@@ -168,7 +179,7 @@ function poseSoldier(p) {
     if (st === 'windup') { Ln(bx - 1 - pull, -17, bx + 6, -17, S.shaft); R(bx + 6, -18, 2, 3, S.bronzeH); }
     R(-6, -22, 2, 8, '#6d4628'); R(-6, -24, 1, 2, '#e9d9b0'); R(-5, -25, 1, 3, '#e9d9b0');      // quiver
   };
-  if (kind !== 'archer' && (st === 'patrol' || st === 'stagger')) weapon();
+  if (kind !== 'archer' && kind !== 'slinger' && (st === 'patrol' || st === 'stagger')) weapon();
   // Legs with greaves
   Ln(-1, hip, b[0], -2 - b[1], S.skinD, 2); R(b[0], -4 - b[1], 2, 3, S.bronzeD); R(b[0], -1 - b[1], 3, 1, S.boot);
   Ln(1, hip, a[0], -2 - a[1], S.skin, 2); R(a[0], -4 - a[1], 2, 3, S.bronze); R(a[0], -1 - a[1], 3, 1, S.boot);
@@ -178,10 +189,13 @@ function poseSoldier(p) {
   R(-4, ky, 2, 4, S.kiltD); R(-4, ky + 2, 8, 1, S.band);
   // Banded bronze corselet
   const tx = -4 + lean, ty = -22 + by;
-  R(tx, ty, 8, 8, S.bronze);
-  for (let r = 1; r < 8; r += 2) R(tx, ty + r, 8, 1, S.bronzeD);
-  R(tx, ty, 2, 8, S.bronzeD);
-  for (let r = 0; r < 8; r += 2) R(tx + 6, ty + r, 1, 1, S.bronzeH);
+  if (bare) { R(tx, ty, 8, 8, S.skin); R(tx, ty, 2, 8, S.skinD); for (let r = 0; r < 8; r++) R(tx + r, ty + r, 1, 1, kind === 'runner' ? '#7a1f2a' : '#6d4628'); }
+  else {
+    R(tx, ty, 8, 8, S.bronze);
+    for (let r = 1; r < 8; r += 2) R(tx, ty + r, 8, 1, S.bronzeD);
+    R(tx, ty, 2, 8, S.bronzeD);
+    for (let r = 0; r < 8; r += 2) R(tx + 6, ty + r, 1, 1, S.bronzeH);
+  }
   // Head, helmet band, feathered crest
   const hx = -3 + lean, hy = ty - 5;
   R(hx, hy, 6, 5, S.skin); R(hx, hy, 2, 5, S.skinD); R(hx + 4, hy + 2, 1, 1, S.eye); R(hx + 2, hy + 4, 3, 1, S.skinD);
@@ -192,8 +206,8 @@ function poseSoldier(p) {
     R(fx, hy - 1 - hts[i], 1, hts[i], i % 2 ? pl[0] : (p.marked ? '#b02a26' : '#b3a583'));
     R(fx + sway, hy - 1 - hts[i], 1, 2, pl[1]);
   }
-  if (kind === 'archer' || (st !== 'patrol' && st !== 'stagger')) weapon();
-  if (kind === 'archer') return;
+  if (kind === 'archer' || kind === 'slinger' || (st !== 'patrol' && st !== 'stagger')) weapon();
+  if (kind === 'archer' || bare) return;
   if (kind === 'heavy') {                                    // tower shield
     const sx = (st === 'thrust' ? -2 : 3) + lean, sy = ty - 2;
     R(sx, sy, 7, 17, S.bronzeD); R(sx + 1, sy + 1, 5, 15, S.bronze); R(sx + 1, sy + 1, 5, 1, S.bronzeH); R(sx + 3, sy + 2, 1, 13, '#7a1f2a'); R(sx + 2, sy + 7, 3, 3, S.bronzeH);
