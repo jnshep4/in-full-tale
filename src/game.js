@@ -35,11 +35,12 @@ const ITEMS = {
 };
 // Camp talk by favor (see favor()), two lines each. Invented, not scripture.
 const CAMP_TALK = [
-  ['A HUNDRED? THE KING SETS YOU A HARD PRICE.', 'THE SHEPHERD WILL NOT COME BACK.'],
-  ['A CAPTAIN FALLEN, AND BY A SLING?', 'THE MEN ARE ASKING YOUR NAME.'],
-  ['THEY SING OF YOU IN THE TOWNS.', 'WE WOULD FOLLOW YOU OUT, SON OF JESSE.'],
-  ['ALL THE CAMP LOVES YOU. THE KING WATCHES.', 'JONATHAN SPEAKS WELL OF YOU.'],
-  ['THE LORD IS WITH YOU. EVERY MAN HERE KNOWS IT.', 'WHO CAN SAY WHAT YOU WILL BE, SON OF JESSE?'],
+  // each row: the old spearman, the young soldier, the king's officer, the camp cook
+  ['A HUNDRED? THE KING SETS YOU A HARD PRICE.', 'IS IT TRUE YOU KILLED A LION WITH YOUR HANDS?', 'THE KING SMILED WHEN HE NAMED THE PRICE. MIND THAT.', "EAT BEFORE YOU GO. THE STORES ARE BY THE KING'S TENT."],
+  ['A CAPTAIN FALLEN, AND BY A SLING?', 'THE MEN ARE ASKING YOUR NAME.', 'THE KING HAS HEARD. HE SAID NOTHING.', 'BRING IN TROPHIES AND THE STEWARD OPENS HIS HAND.'],
+  ['TWENTY YEARS I HAVE SERVED. I NEVER SAW THE LIKE.', 'THEY SING OF YOU IN THE TOWNS.', 'THE KING ASKS EACH NIGHT HOW MANY YOU HAVE.', 'THE MEN SAVE YOU THE BEST OF THE POT NOW.'],
+  ['WE WOULD FOLLOW YOU OUT, SON OF JESSE.', 'ALL THE CAMP LOVES YOU.', 'JONATHAN SPEAKS WELL OF YOU. THE KING WATCHES.', 'EVEN THE WATER-CARRIERS KNOW YOUR NAME.'],
+  ['THE LORD IS WITH YOU. EVERY MAN HERE KNOWS IT.', 'WHO CAN SAY WHAT YOU WILL BE, SON OF JESSE?', 'THE KING FEARS YOU. WALK SOFTLY IN HIS TENT.', 'WHEN YOU ARE A GREAT MAN, REMEMBER WHO FED YOU.'],
 ];
 const SAUL_MOOD = ['', "The king's servants praise David. The king says little.", "The king's servants praise David. The king says little.", "Saul watches David closely now. The camp's love for him troubles the king.", "Saul watches David closely now. The camp's love for him troubles the king."];
 // Narration, not scripture: the last of the opening cards.
@@ -132,7 +133,7 @@ export class Game {
   }
   pauseMenu() {
     const rows = this.tracker().map((r) => `<tr><td>${r.id}. ${r.name}</td><td>${r.got} / ${r.of}</td><td>${r.captain ? 'captain fallen' : ''}</td></tr>`).join('');
-    const powers = '<div class="hows">' + POWERS.filter((q) => this.has(q.id)).map((q) => `<p class="how"><b>${q.name}.</b> ${q.how}</p>`).join('') + `<p class="how"><b>The stores.</b> David carries ${this.save.item ? ITEMS[this.save.item].name : 'nothing'}. ${this.touch ? 'Tap USE' : 'Press Q (or O)'} to use what he carries. The steward in Saul's camp parts with one thing for every three trophies brought in.</p>` + '</div>';
+    const powers = '<div class="hows">' + POWERS.filter((q) => this.has(q.id)).map((q) => `<p class="how"><b>${q.name}.</b> ${q.how}</p>`).join('') + `<p class="how"><b>The stores.</b> David carries ${this.bagText()}, up to three of each. ${this.touch ? 'Tap USE to use the one that is ready, NEXT to ready another.' : 'Press Q (or O) to use the one that is ready, E (or U) to ready another.'} The steward in Saul's camp parts with one thing for every three trophies brought in.</p>` + '</div>';
     this.ui.show({ kind: 'pause', quick: true, sound: 'select', esc: 'resume', buttons: [{ label: 'Resume', value: 'resume' }, { label: 'Map', value: 'map' }, { label: 'Settings', value: 'set' }, { label: 'Title', value: 'title' }],
       html: `<h2>The Tally: ${this.save.tally} of ${TALLY_GOAL}</h2><table class="sheet">${rows}</table>${powers}`,
       onClose: (v) => { if (v === 'set') this.settingsMenu(() => this.pauseMenu()); else if (v === 'title') this.title(); else if (v === 'map') this.mapCard(this.region.id > 0 ? this.region.id : 1); } });
@@ -192,7 +193,7 @@ export class Game {
         if (v === 'back') back(); else this.settingsMenu(back, ['s-', 's+', 'm-', 'm+', 'sh', 'li'].indexOf(v));
       } });
   }
-  has(id) { return id === 'item' ? !!this.save.item : this.save.powers.includes(id); }
+  has(id) { return id === 'item' ? !!this.save.item : id === 'swap' ? this.kinds().length > 1 : this.save.powers.includes(id); }
   flag(k) { return !!this.save.flags[k]; }
   maxHp() { let n = 5; for (const k in this.save.flags) if (k.startsWith('boss')) n++; return n; }
   after(t, fn) { this.timers.push({ t, fn }); }
@@ -361,26 +362,44 @@ export class Game {
   // What the man David is standing beside has to say. Invented talk, not scripture.
   campTalk(q) {
     if (this.region.id !== 0 || this.ui.cur || Math.abs(this.player.cx - (q.cx * T + 8)) > 26) return null;
-    return CAMP_TALK[this.favor()][q.cx % 2];
+    return CAMP_TALK[this.favor()][this.room.props.filter((x) => x.type === 'guard').indexOf(q) % 4];
   }
-  // The stores: David carries one thing at a time and may change it whenever he is in camp.
+  // The bag: up to three of each thing (save.bag), one of them ready to hand (save.item).
+  bag() {
+    const sv = this.save; if (!sv.bag) sv.bag = {};
+    if (sv.item && !(sv.bag[sv.item] > 0)) sv.bag[sv.item] = 1;                 // older saves carried a single thing
+    return sv.bag;
+  }
+  kinds() { const b = this.bag(); return Object.keys(ITEMS).filter((id) => b[id] > 0); }
+  bagText() { const b = this.bag(), k = this.kinds(); return k.length ? k.map((id) => `${ITEMS[id].name}${b[id] > 1 ? ' (' + b[id] + ')' : ''}`).join(', ') : 'nothing'; }
+  give(id) { const b = this.bag(); if ((b[id] || 0) >= 3) return false; b[id] = (b[id] || 0) + 1; if (!this.save.item) this.save.item = id; this.persist(); return true; }
+  swapItem() {
+    const k = this.kinds(); if (k.length < 2 || this.ui.cur) return;
+    this.save.item = k[(k.indexOf(this.save.item) + 1) % k.length]; this.persist(); this.sfx.play('select'); this.banner2('READY: ' + ITEMS[this.save.item].name.toUpperCase(), 1.2);
+  }
   // The steward gives one thing at the start and one more for every three trophies brought in.
   storeCredit() { return 1 + Math.floor(this.save.tally / 3) - (this.save.taken || 0); }
   stores() {
-    const have = this.save.item ? ITEMS[this.save.item].name : 'nothing', credit = this.storeCredit(), more = 3 - (this.save.tally % 3);
+    const have = this.bagText(), credit = this.storeCredit(), more = 3 - (this.save.tally % 3);
     if (credit <= 0) {
       this.ui.scene('stores', [{ title: 'The Stores', text: [`David carries ${have}.`, `The steward has given what he will for now. Bring in ${more === 1 ? 'one more trophy' : more + ' more trophies'} and he will open the stores again.`, 'Soldiers who are not marked sometimes carry figs, oil or a horn.'] }], [{ label: 'Leave', value: 'leave' }]);
       return;
     }
-    this.ui.scene('stores', [{ title: 'The Stores', text: [`The steward lets David carry one thing out of the camp. He carries ${have}. The steward will part with ${credit === 1 ? 'one thing' : credit + ' things'} now, and one more for every three trophies brought in.`, ...Object.values(ITEMS).map((it) => `${it.name}: ${it.what}`), this.touch ? 'Tap USE to use it.' : 'Press Q to use it.'] }],
-      [...Object.keys(ITEMS).map((id) => ({ label: ITEMS[id].name, value: id })), { label: 'Leave', value: 'leave' }], (v) => { if (ITEMS[v]) { this.save.item = v; this.save.taken = (this.save.taken || 0) + 1; this.persist(); this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[v].name.toUpperCase()); } });
+    this.ui.scene('stores', [{ title: 'The Stores', text: [`David may carry up to three of each thing and keeps one ready to hand. He carries ${have}. The steward will part with ${credit === 1 ? 'one thing' : credit + ' things'} now, and one more for every three trophies brought in.`, ...Object.values(ITEMS).map((it) => `${it.name}: ${it.what}`), this.touch ? 'Tap USE to use what is ready; NEXT makes another thing ready.' : 'Press Q to use what is ready; E makes another thing ready.'] }],
+      [...Object.keys(ITEMS).map((id) => ({ label: ITEMS[id].name, value: id })), { label: 'Leave', value: 'leave' }], (v) => {
+        if (!ITEMS[v]) return;
+        if (!this.give(v)) { this.banner2('HE CARRIES ALL HE CAN OF THAT'); this.sfx.play('locked'); return; }
+        this.save.item = v; this.save.taken = (this.save.taken || 0) + 1; this.persist(); this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[v].name.toUpperCase());
+      });
   }
   useItem() {
     const id = this.save.item, p = this.player; if (!id || this.ui.cur) return;
+    const b = this.bag();
     if (id === 'fig') { if (p.hp >= p.maxHp) { this.banner2('NOT HURT'); return; } p.hp = Math.min(p.maxHp, p.hp + 3); }
     else if (id === 'oil') this.swift = 12;
     else if (id === 'horn') { for (const s of this.soldiers) if (s.state !== 'dying' && Math.abs(s.cx - p.cx) < 260) { s.state = 'stagger'; s.t = 3; s.vx = 0; } this.shake = Math.max(this.shake, 3); }
-    this.save.item = null; this.persist(); this.sfx.play(id === 'horn' ? 'roar' : 'pop');
+    b[id]--; if (b[id] <= 0) { delete b[id]; this.save.item = null; this.save.item = this.kinds()[0] || null; }
+    this.persist(); this.sfx.play(id === 'horn' ? 'roar' : 'pop');
     this.puff(p.cx, p.cy, 10, '#ffd680', 110, { glow: true, life: 0.4 });
     this.banner2(ITEMS[id].used);
   }
@@ -486,6 +505,7 @@ export class Game {
 
     if (this.swift > 0) this.swift -= dt;
     if (this.input.pressed.item && !this.player.dead) this.useItem();
+    if (this.input.pressed.swap && !this.player.dead) this.swapItem();
     this.player.update(this, dt);
     if (this.checkLinks()) return;
     if (this.boss) { this.boss.update(this, dt); if (this.boss && this.boss.gone) this.boss = null; }
@@ -503,7 +523,7 @@ export class Game {
     for (const k of this.pickups) {
       if (!k.rest) { k.vy = Math.min(k.vy + 700 * dt, 400); moveBody(this.room, k, dt, this.res); if (this.res.hy === 1) { k.rest = true; k.vy = 0; } }
       const on = !p.dead && k.x < p.x + p.w && k.x + k.w > p.x && k.y < p.y + p.h && k.y + k.h > p.y;
-      if (k.item) { if (on && !this.save.item) { k.gone = true; this.save.item = k.item; this.persist(); this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[k.item].name.toUpperCase()); } continue; }
+      if (k.item) { if (on && this.give(k.item)) { k.gone = true; this.sfx.play('pop'); this.banner2('DAVID TAKES ' + ITEMS[k.item].name.toUpperCase()); } continue; }
       if (!p.dead && p.hp < p.maxHp && k.x < p.x + p.w && k.x + k.w > p.x && k.y < p.y + p.h && k.y + k.h > p.y) { k.gone = true; p.hp++; this.sfx.play('heal'); this.puff(k.x + 3, k.y, 6, '#b7f0a0', 60, { glow: true }); }
     }
     for (const q of this.parts) {
@@ -738,7 +758,7 @@ export class Game {
       ctx.fillStyle = '#ffd680'; ctx.fillRect(bx + bw / 2, by - 1, 1, 6);
     }
     if (this.save.item || this.swift > 0) {
-      const s = this.swift > 0 ? 'SWIFT SLING ' + Math.ceil(this.swift) : (this.touch ? '' : 'Q: ') + ITEMS[this.save.item].name.toUpperCase();
+      const s = this.swift > 0 ? 'SWIFT SLING ' + Math.ceil(this.swift) : (this.touch ? '' : 'Q: ') + ITEMS[this.save.item].name.toUpperCase() + (this.bag()[this.save.item] > 1 ? ' X' + this.bag()[this.save.item] : '') + (this.kinds().length > 1 && !this.touch ? '   E: NEXT' : '');
       drawText(ctx, s, 8, 20, this.swift > 0 ? '#ffd680' : '#d9cba8', 1);
     }
     const tip = this.tip();

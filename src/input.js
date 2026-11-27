@@ -3,12 +3,12 @@ const KEYMAP = {
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
   ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
   Space: 'jump', KeyZ: 'jump', KeyX: 'fire', KeyJ: 'fire',
-  KeyQ: 'item', KeyO: 'item', KeyC: 'melee', KeyK: 'melee', KeyV: 'cord', KeyI: 'cord', ShiftLeft: 'dash', ShiftRight: 'dash', KeyL: 'dash',
+  KeyQ: 'item', KeyO: 'item', KeyE: 'swap', KeyU: 'swap', KeyC: 'melee', KeyK: 'melee', KeyV: 'cord', KeyI: 'cord', ShiftLeft: 'dash', ShiftRight: 'dash', KeyL: 'dash',
   Enter: 'confirm', Escape: 'pause', KeyP: 'pause', Backquote: 'debug',
 };
-export const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'fire', 'melee', 'dash', 'cord', 'item', 'confirm', 'pause', 'debug'];
+export const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'fire', 'melee', 'dash', 'cord', 'item', 'swap', 'confirm', 'pause', 'debug'];
 // Standard-mapping gamepad buttons.
-const PAD = { jump: [0], fire: [2, 7], melee: [1, 3], dash: [5], cord: [4], item: [6], confirm: [0, 9], pause: [9], up: [12], down: [13], left: [14], right: [15] };
+const PAD = { jump: [0], fire: [2, 7], melee: [1, 3], dash: [5], cord: [4], item: [6], swap: [8], confirm: [0, 9], pause: [9], up: [12], down: [13], left: [14], right: [15] };
 
 export class Input {
   constructor(target = window) {

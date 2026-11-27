@@ -50,20 +50,22 @@ const { launch, checker } = require('./helpers.cjs');
     const use = await ev(() => { const g = __ift.game, out = {}; let p = g.player; g.ui.close('fig'); out.took = g.save.item; p.hp = 1; g.useItem(); out.hp = p.hp; out.left = g.save.item;
       g.save.item = 'oil'; const c0 = g.chargeScale(); g.useItem(); out.swift = [c0, g.chargeScale()];
       g.loadRoom(1, 'outskirts'); p = g.player; g.save.item = 'horn'; const near = g.soldiers.filter((x) => Math.abs(x.cx - p.cx) < 260); p.x = near.length ? p.x : g.soldiers[0].x - 60; g.useItem(); out.horn = g.soldiers.filter((x) => x.state === 'stagger').length; out.has = g.has('item');
-      g.loadRoom(0, 'camp'); p = g.player; const q = g.room.props.find((x) => x.type === 'guard'); p.x = q.cx * 16; out.talk0 = g.campTalk(q); g.save.flags.boss1 = 1; out.talk1 = g.campTalk(q); p.x += 200; out.far = g.campTalk(q); delete g.save.flags.boss1; g.swift = 0; p.x = q.cx * 16; g.snapCamera(); return out; });
+      g.loadRoom(0, 'camp'); p = g.player; const q = g.room.props.find((x) => x.type === 'guard'); p.x = q.cx * 16; out.talk0 = g.campTalk(q); g.save.flags.boss1 = 1; out.talk1 = g.campTalk(q); p.x += 200; out.far = g.campTalk(q); const gs = g.room.props.filter((x) => x.type === 'guard'); out.voices = new Set(gs.slice(0, 4).map((x) => { p.x = x.cx * 16; return g.campTalk(x); })).size; delete g.save.flags.boss1; g.swift = 0; p.x = q.cx * 16; g.snapCamera(); return out; });
     await step(5); await h.shot('m5-camp-talk');
     t.ok(use.took === 'fig' && use.hp === 4 && use.left === null, 'a cake of figs restores three hearts and is spent', use);
     t.ok(use.swift[0] === 1 && use.swift[1] === 0.25, 'sling oil quickens the sling', use.swift);
     t.ok(use.horn >= 1 && use.has === false, "a ram's horn staggers the soldiers near", use.horn);
-    t.ok(use.talk0 && use.talk1 && use.talk0 !== use.talk1 && use.far === null, 'the men of the camp speak to David, and speak differently once a captain has fallen', [use.talk0, use.talk1]);
+    t.ok(use.talk0 && use.talk1 && use.talk0 !== use.talk1 && use.far === null && use.voices === 4, 'the men of the camp speak to David, and speak differently once a captain has fallen', [use.talk0, use.talk1]);
     const lim = await ev(() => { const g = __ift.game, p = g.player, out = {}; out.credit0 = g.storeCredit(); g.stores(); out.shut = [...document.querySelectorAll('#card button')].map((b) => b.textContent); g.ui.close('leave');
       g.save.tally = 3; out.credit3 = g.storeCredit(); g.save.tally = 0;
-      g.save.item = null; g.pickups.push({ x: p.x, y: p.y + 8, w: 6, h: 7, vx: 0, vy: 0, rest: true, item: 'horn' }); __ift.step(2, []); out.got = g.save.item; out.left = g.pickups.length;
-      g.pickups.push({ x: p.x, y: p.y + 8, w: 6, h: 7, vx: 0, vy: 0, rest: true, item: 'oil' }); __ift.step(2, []); out.kept = g.save.item; out.lying = g.pickups.length; g.render(); return out; });
+      g.save.item = null; g.save.bag = {}; g.pickups.push({ x: p.x, y: p.y + 8, w: 6, h: 7, vx: 0, vy: 0, rest: true, item: 'horn' }); __ift.step(2, []); out.got = g.save.item; out.left = g.pickups.length;
+      g.pickups.push({ x: p.x, y: p.y + 8, w: 6, h: 7, vx: 0, vy: 0, rest: true, item: 'oil' }); __ift.step(2, []); out.kept = g.save.item; out.lying = g.pickups.length; out.bag = g.bagText(); out.canSwap = g.has('swap'); g.swapItem(); out.swapped = g.save.item; g.useItem(); out.after = [g.save.item, g.bagText()];
+      g.save.bag = { fig: 3 }; g.save.item = 'fig'; out.full = g.give('fig'); g.render(); return out; });
     await h.shot('m5-stores-tent');
     t.ok(lim.credit0 === 0 && lim.shut.join() === 'Leave' && lim.credit3 === 1, 'the steward gives one thing, then one more for every three trophies', lim);
-    t.ok(lim.got === 'horn' && lim.left === 0 && lim.kept === 'horn' && lim.lying === 1, 'a dropped horn is picked up when his hands are empty; a second thing is left lying', lim);
-    await ev(() => { const g = __ift.game; g.save.item = null; g.pickups = []; });
+    t.ok(lim.got === 'horn' && lim.left === 0 && lim.kept === 'horn' && lim.lying === 0 && /horn/.test(lim.bag) && /oil/.test(lim.bag), 'dropped things go into the bag; the first stays ready to hand', lim);
+    t.ok(lim.canSwap && lim.swapped === 'oil' && lim.after[0] === 'horn' && !/oil/.test(lim.after[1]) && /horn/.test(lim.after[1]) && lim.full === false, 'E readies the next thing; using the last of one readies another; three of a kind is the most he carries', lim);
+    await ev(() => { const g = __ift.game; g.save.item = null; g.save.bag = {}; g.pickups = []; });
     await ev(() => { const g = __ift.game; g.player.x = 14 * 16 + 3; g.player.hp = g.player.maxHp; g.snapCamera(); });
   }
 

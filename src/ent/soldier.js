@@ -9,8 +9,8 @@ import { drawSoldier, drawSoldierLight, drawLion } from '../gfx/chars.js';
 import { Shot } from './boss.js';
 
 const KIND = {
-  spear: { w: 12, h: 24, hp: [3, 4], walk: 28, chase: 82, sight: 124, reach: 36, guard: 0.5, wind: 0.42 },
-  archer: { w: 12, h: 24, hp: [2, 3], walk: 18, chase: 0, sight: 232, reach: 232, guard: 0, wind: 0.75, ranged: true },
+  spear: { w: 12, h: 24, hp: [3, 4], walk: 28, chase: 90, sight: 140, reach: 36, guard: 0.5, wind: 0.42 },
+  archer: { w: 12, h: 24, hp: [2, 3], walk: 18, chase: 0, sight: 232, reach: 232, guard: 0, wind: 0.65, ranged: true },
   heavy: { w: 14, h: 26, hp: [7, 8], walk: 20, chase: 46, sight: 120, reach: 36, guard: 1, wind: 0.55 },
   runner: { w: 12, h: 24, hp: [2, 3], walk: 40, chase: 128, sight: 150, reach: 30, guard: 0, wind: 0.3 },
   pike: { w: 12, h: 24, hp: [4, 5], walk: 22, chase: 58, sight: 140, reach: 60, guard: 0.5, wind: 0.62 },
@@ -21,12 +21,14 @@ const KIND = {
 export class Soldier {
   constructor(sp, marked, regionId = 1) {
     this.sp = sp; this.id = sp.id || null; this.marked = marked; this.kind = sp.kind || 'spear';
-    const K = this.K = KIND[this.kind];
+    // Deeper into Philistia the troops are quicker: shorter wind-ups and rests, faster on their feet.
+    const deep = Math.max(0, regionId - 1), quick = this.quick = Math.max(0.65, 1 - 0.035 * deep);
+    const K = this.K = { ...KIND[this.kind] }; K.wind *= quick; K.chase *= 1 + 0.03 * deep;
     this.w = K.w; this.h = K.h;
     this.home = { x: sp.cx * T + 8 - K.w / 2, y: (sp.cy + 1) * T - this.h };
     this.x = this.home.x; this.y = this.home.y; this.vx = 0; this.vy = 0;
     this.face = sp.cx % 2 ? 1 : -1;
-    this.hp = K.hp[marked ? 1 : 0] + Math.floor((regionId - 1) / 4);
+    this.hp = K.hp[marked ? 1 : 0] + Math.floor((regionId - 1) / 2);
     this.state = 'patrol'; this.t = 0; this.lost = 0; this.flash = 0; this.walk = 0; this.struck = false; this.wall = false;
     this.moving = false; this.gone = false; this.onGround = false;
   }
@@ -57,7 +59,11 @@ export class Soldier {
       case 'patrol':
         this.vx = this.face * K.walk;
         if (this.onGround && !this.floorAhead(room, this.face)) { this.face = -this.face; this.vx = 0; }
-        if (sees) { this.state = 'alert'; this.t = 0.28; this.vx = 0; this.face = Math.sign(dx) || this.face; g.sfx.play('windup'); }
+        if (sees) {
+          this.state = 'alert'; this.t = 0.28; this.vx = 0; this.face = Math.sign(dx) || this.face; g.sfx.play('windup');
+          // He calls out: comrades close by turn on David too, whichever way they were facing.
+          for (const o of g.soldiers) if (o !== this && o.state === 'patrol' && o.kind !== 'lion' && Math.abs(o.cx - this.cx) < 130 && Math.abs(o.y - this.y) < 40) { o.state = 'alert'; o.t = 0.45; o.vx = 0; o.face = Math.sign(p.cx - o.cx) || o.face; }
+        }
         break;
       case 'alert':
         this.vx = 0; this.t -= dt; if (this.t <= 0) this.state = 'chase';
@@ -101,7 +107,7 @@ export class Soldier {
             this.struck = p.hurt(g, 1, this.face) || this.struck;
           }
         }
-        this.t -= dt; if (this.t <= 0) { this.state = 'recover'; this.t = this.kind === 'archer' ? 1.0 : this.kind === 'slinger' ? 0.7 : this.kind === 'heavy' || this.kind === 'pike' ? 0.8 : 0.55; if (this.kind === 'runner' && this.floorAhead(room, -this.face)) { this.vx = -this.face * 240; this.t = 0.6; } }
+        this.t -= dt; if (this.t <= 0) { this.state = 'recover'; this.t = this.kind === 'archer' ? 1.0 : this.kind === 'slinger' ? 0.7 : (this.kind === 'heavy' || this.kind === 'pike' ? 0.8 : 0.45) * this.quick; if (this.kind === 'runner' && this.floorAhead(room, -this.face)) { this.vx = -this.face * 240; this.t = 0.6; } }
         break;
       }
       case 'recover':
