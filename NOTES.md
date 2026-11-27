@@ -103,6 +103,14 @@ James said the budget had reset (message of 2026-11-23). No new figure was given
 - **Tent art.** The stores door has its own look (`look: 'stores'` in `drawDoor`): plain cloth, sacks, oil jars. The camp prop tent at column 29 was removed because it covered the sacks.
 - Tests: m5 40 (two new checks), m1 39, m2 42, m3 53, m4 53, m6 20, m7 16, `npm test` pass. The prop-tent removal came after that run; only `npm test` was rerun for it.
 
+## Third round of playtester feedback: bag, camp voices, tougher soldiers (2026-11-27)
+
+- **Bag.** David carries up to three of each item (`save.bag`) and keeps one ready (`save.item`). Q/O uses the ready one; E/U (pad button 8, a NEXT touch button) readies the next kind (`swapItem`). Drops always go into the bag unless he already has three of that kind. Stores takes still cost one credit each. Old saves with a single `save.item` are folded into the bag by `bag()`. Bug found by the tests and fixed: using the last of a kind used to re-add it.
+- **Camp voices.** `CAMP_TALK` now has four speakers per favor tier, assigned by the man's place in the camp (index % 4): an old spearman, a young soldier, one of the king's officers, the camp cook. 20 lines, all invented. Two lean on the text by paraphrase from memory and want James's check: the lion (1 Samuel 17) and Saul's motive in naming the price (1 Samuel 18).
+- **Tougher soldiers** (`src/ent/soldier.js`): spearmen chase at 90 (was 82), see 140 px (was 124) and rest 0.45 s after a thrust (was 0.55); archers draw in 0.65 s (was 0.75). A soldier who spots David calls every comrade within 130 px. By region: wind-up and rest shorten 3.5% per region (floor 65%), chase speed rises 3% per region, and health rises by one every two regions (was every four). Soldiers a captain summons are built at region-1 strength so boss fights are not harder; with regional strength the bot lost to Akhtal six times running.
+- Tests: m1 39, m2 42, m3 51, m4 53, m5 41, m6 20, m7 16, `npm test` pass. m3 ran 51 checks where it used to run 53, with none failing; the cause was not chased (the relic check now also accepts the power card already showing, as m4's does). In m4 the bot needed three attempts on one captain, within the six it is allowed.
+- Not checked: whether a human finds soldiers hard enough now. All numbers above are one-line changes in `KIND` and the `Soldier` constructor.
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
@@ -157,6 +165,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | stores, items, camp talk (read just before committing) | 15,884,455 |
 | 2 | budget reset by James at 15,927,444; soldier kinds, captain attacks, m7 (read just before committing) | 16,490,116 |
 | 2 | stores limit, drops, tent art, pause-sheet line (read just before committing) | 16,811,420 |
+| 2 | bag, camp voices, tougher soldiers (read just before committing) | 17,879,976 |
 
 ## Calibration
 
