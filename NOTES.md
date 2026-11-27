@@ -111,6 +111,12 @@ James said the budget had reset (message of 2026-11-23). No new figure was given
 - Tests: m1 39, m2 42, m3 51, m4 53, m5 41, m6 20, m7 16, `npm test` pass. m3 ran 51 checks where it used to run 53, with none failing; the cause was not chased (the relic check now also accepts the power card already showing, as m4's does). In m4 the bot needed three attempts on one captain, within the six it is allowed.
 - Not checked: whether a human finds soldiers hard enough now. All numbers above are one-line changes in `KIND` and the `Soldier` constructor.
 
+## Phone buttons: no overlap, sling and jump with one thumb (2026-11-27, from playtesters)
+
+- **Overlap fixed.** USE sat on top of SLING. Bottom row is now, from the right edge: JUMP, SLING, USE, NEXT, with a gap between each. m6 checks that with all eight buttons showing no two circles overlap and all are on screen.
+- **One thumb, two buttons** (`src/touch.js`). Buttons no longer own their touches. Every finger on the right presses each button whose circle (drawn size x 1.2) it lies in, and keeps doing so as it slides. A thumb holding SLING can roll onto JUMP and hold both; a thumb set down between them presses both. USE, NEXT and pause answer only to a finger that came down on them.
+- Tests: m6 24 (four new checks), run in an emulated iPhone 13 in Chromium with synthetic pointer events. Not tried on a real phone.
+
 ## Final summary (2026-11-18)
 
 **What exists.** "In Full Tale" is a complete 2D action Metroidvania for the desktop browser: a static site with no build step, no dependencies, no network calls, all art drawn in code and all sound synthesised. David starts in Saul's camp with a sling. Ten regions open off the camp, each with exactly 20 marked Philistine soldiers (200 trophies), ordinary soldiers that respawn and never drop trophies, and a captain who drops a power: dash, double jump, wall climb, ground pound, Goliath's sword, a buckler, a grappling cord, swimming, a heavy stone, a faster sling. Each captain is weak to a power won earlier. Each fall shows the brief's verse card, then the reference and "(KJV)". Goliath is region 5's captain, wounded only by the sling, and his sword card shows 1 Samuel 21:9. At 100 a messenger scene plays at the camp and Saul's tent offers Ending A from then on; with all 200 and the tenth captain fallen it offers Ending B, which closes on 1 Samuel 18:27. There is a title screen, a pause sheet with per-region counts, settings, music, keyboard and gamepad input, saving to localStorage, and a hidden debug menu (backquote) that warps, grants powers, sets the tally, and switches off damage.
@@ -166,6 +172,7 @@ The meter is a proxy. It reads about 14% fewer output tokens than Claude Code's 
 | 2 | budget reset by James at 15,927,444; soldier kinds, captain attacks, m7 (read just before committing) | 16,490,116 |
 | 2 | stores limit, drops, tent art, pause-sheet line (read just before committing) | 16,811,420 |
 | 2 | bag, camp voices, tougher soldiers (read just before committing) | 17,879,976 |
+| 2 | phone buttons: overlap, one-thumb sling and jump (read just before committing) | 18,400,620 |
 
 ## Calibration
 

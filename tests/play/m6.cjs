@@ -96,6 +96,38 @@ const { checker, SHOTS } = require('./helpers.cjs');
   const kept = await ev(() => [__ift.game.demo, location.search]);
   t.ok(kept[0] === 1, 'the demo setting is remembered on the device', kept);
 
+  console.log('button layout and one-thumb play');
+  {
+    const r = await ev(() => {
+      const g = __ift.game, inp = g.input, el = document.querySelector('#touch'), out = {};
+      const was = [g.save.powers.slice(), g.save.item, g.save.bag];
+      while (g.ui.cur) g.ui.close('ok'); g.modal = false; el.hidden = false;
+      g.save.powers = ['dash', 'sword', 'grapple']; g.save.bag = { fig: 1, oil: 1 }; g.save.item = 'fig';
+      for (const b of el.querySelectorAll('[data-power]')) b.hidden = !g.has(b.dataset.power);
+      const vis = [...el.querySelectorAll('.tbtn')].filter((b) => !b.hidden), box = (b) => { const q = b.getBoundingClientRect(); return { a: b.dataset.act, x: q.left + q.width / 2, y: q.top + q.height / 2, r: q.width / 2 }; };
+      const bs = vis.map(box); out.shown = bs.map((b) => b.a); out.overlaps = [];
+      for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) if (Math.hypot(bs[i].x - bs[j].x, bs[i].y - bs[j].y) < bs[i].r + bs[j].r) out.overlaps.push(bs[i].a + '/' + bs[j].a);
+      out.sized = bs.every((b) => b.r > 10); out.onScreen = bs.every((b) => b.x - b.r >= 0 && b.x + b.r <= innerWidth && b.y - b.r >= 0 && b.y + b.r <= innerHeight);
+      const at = (a) => bs.find((b) => b.a === a), fire = at('fire'), jump = at('jump'), use = at('item');
+      const send = (type, x, y, id) => el.dispatchEvent(new PointerEvent(type, { pointerId: id, clientX: x, clientY: y, bubbles: true, cancelable: true, pointerType: 'touch' }));
+      const held = () => ['fire', 'jump', 'item'].filter((a) => inp.touch.has(a)).join('+');
+      // a thumb set down between SLING and JUMP
+      send('pointerdown', (fire.x + jump.x) / 2, fire.y, 21); out.between = held(); send('pointerup', 0, 0, 21); out.released = held();
+      // a thumb holding SLING rolls toward JUMP, then back
+      send('pointerdown', fire.x, fire.y, 22); out.hold = held(); send('pointermove', (fire.x + jump.x) / 2, fire.y, 22); out.rolled = held(); send('pointermove', fire.x, fire.y, 22); out.back = held();
+      // ... and slides across USE without using anything
+      send('pointermove', use.x, use.y, 22); out.slidUse = held(); send('pointerup', use.x, use.y, 22);
+      send('pointerdown', use.x, use.y, 23); out.tapUse = held(); send('pointerup', use.x, use.y, 23);
+      g.save.powers = was[0]; g.save.item = was[1]; g.save.bag = was[2]; inp.touch.clear(); inp.latched.clear();
+      return out;
+    });
+    await shot('m6-buttons');
+    t.ok(r.shown.length === 8 && r.overlaps.length === 0 && r.onScreen && r.sized, 'with every button showing, none overlaps another and all are on screen', r);
+    t.ok(r.between === 'fire+jump' && r.released === '', 'a thumb set down between SLING and JUMP presses both', r);
+    t.ok(r.hold === 'fire' && r.rolled === 'fire+jump' && r.back === 'fire', 'a thumb holding SLING can roll onto JUMP and back without letting the sling go', r);
+    t.ok(r.slidUse === '' && r.tapUse === 'item', 'USE answers to a tap, not to a thumb sliding across it', r);
+  }
+
   console.log('portrait');
   await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
   const turn = await ev(() => getComputedStyle(document.getElementById('turn')).display);
