@@ -455,7 +455,7 @@ export class Game {
   }
   summon(boss, n, kind) {
     for (let i = 0; i < n; i++) {
-      const cx = i % 2 ? this.room.w - 4 : 3, s = new Soldier({ type: 'soldier', kind, cx, cy: Math.floor((boss.y + boss.h - 1) / T) }, false, this.region.id);
+      const cx = i % 2 ? this.room.w - 4 : 3, s = new Soldier({ type: 'soldier', kind, cx, cy: Math.floor((boss.y + boss.h - 1) / T) }, false, 1);          // a captain's men keep their first-region strength: the fight is his
       s.summoned = true; s.state = 'chase'; this.soldiers.push(s);
     }
   }

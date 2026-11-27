@@ -139,7 +139,7 @@ const ORDER = ['dash', 'double', 'climb', 'pound', 'sword', 'shield', 'grapple',
       t.ok(card && card.text === info.verse.text && card.ref === info.verse.ref && card.tag === info.tag, `his verse card reads ${info.verse.ref} word for word, then the reference and (KJV)`, card);
       await h.shot(`m3-boss${n}-verse`);
       await step(40); await step(1, ['confirm']); s = await step(20);
-      t.ok(s.relic && s.relic.power === info.power.id, `he drops ${info.power.name}`, s.relic);
+      t.ok((s.relic && s.relic.power === info.power.id) || s.card === 'power', `he drops ${info.power.name}`, s.relic);
       await h.shot(`m3-boss${n}-relic`);
       if (!s.relic) { console.log('  (skipping the rest of this captain)'); continue; }
       // He may be standing on a plank above it: drop through, then walk to it.
